@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="An interactive map of historical borders in Europe, from antiquity to the present, built on the open Historical Basemaps dataset."
+    />
+    <title>Historical borders of Europe</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <!--
+      Text nodes carrying data-i18n are filled from src/strings.ts at start-up,
+      so no user-facing copy is hard-coded in this file.
+    -->
+    <div class="app">
+      <header class="topbar">
+        <div class="topbar__identity">
+          <h1 class="topbar__title" data-i18n="appTitle"></h1>
+          <p class="topbar__tagline" data-i18n="appTagline"></p>
+        </div>
+
+        <div class="topbar__controls">
+          <button id="basemap-toggle" class="control" type="button" aria-pressed="true">
+            <span data-i18n="basemapToggle"></span>
+            <span id="basemap-state" class="control__state"></span>
+          </button>
+          <button id="reset-view" class="control" type="button" data-i18n="resetView"></button>
+        </div>
+      </header>
+
+      <main class="stage">
+        <div id="map" class="map" role="application" aria-label="Historical border map"></div>
+        <div id="tooltip" class="tooltip" role="status" hidden></div>
+
+        <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+
+        <aside id="legend" class="legend">
+          <h2 class="legend__title" data-i18n="legendHeading"></h2>
+          <p class="legend__note" data-i18n="legendColorNote"></p>
+          <ul class="legend__list">
+            <li class="legend__item">
+              <span class="swatch swatch--precise" aria-hidden="true"></span>
+              <span data-i18n="legendPrecise"></span>
+            </li>
+            <li class="legend__item">
+              <span class="swatch swatch--fuzzy" aria-hidden="true"></span>
+              <span data-i18n="legendApproximate"></span>
+            </li>
+          </ul>
+          <p id="basemap-hint" class="legend__note legend__note--hint" hidden></p>
+        </aside>
+
+        <aside
+          id="panel"
+          class="panel"
+          aria-hidden="true"
+          aria-label="Territory details"
+        ></aside>
+      </main>
+
+      <section
+        id="disclaimer"
+        class="disclaimer"
+        role="note"
+        aria-live="polite"
+        hidden
+      >
+        <div class="disclaimer__text">
+          <strong data-i18n="disclaimerTitle"></strong>
+          <p data-i18n="disclaimerBody"></p>
+        </div>
+        <button
+          id="disclaimer-dismiss"
+          class="disclaimer__dismiss"
+          type="button"
+          data-i18n="disclaimerDismiss"
+        ></button>
+      </section>
+
+      <section id="timeline" class="timeline">
+        <div class="timeline__readout">
+          <span class="timeline__label" data-i18n="showingYear"></span>
+          <output id="timeline-year" class="timeline__year"></output>
+          <span id="timeline-position" class="timeline__position"></span>
+          <span id="timeline-features" class="timeline__features"></span>
+        </div>
+
+        <div class="timeline__controls">
+          <button id="timeline-prev" class="control control--icon" type="button">‹</button>
+          <button id="timeline-play" class="control control--icon" type="button">▶</button>
+          <button id="timeline-next" class="control control--icon" type="button">›</button>
+
+          <div class="timeline__track">
+            <input id="timeline-slider" class="timeline__slider" type="range" />
+            <div id="timeline-ticks" class="timeline__ticks" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <p class="timeline__help">
+          <span data-i18n="timelineHelp"></span>
+          <span data-i18n="timelineNote"></span>
+        </p>
+      </section>
+
+      <footer class="footer">
+        <div class="footer__column">
+          <h2 class="footer__heading" data-i18n="footerDataHeading"></h2>
+          <p>
+            <a
+              id="footer-dataset-link"
+              href="https://github.com/aourednik/historical-basemaps"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-i18n="footerDataset"
+            ></a>
+            <span data-i18n="footerDatasetAuthor"></span>
+          </p>
+          <p>
+            <span data-i18n="footerLicense"></span>
+            <a
+              href="https://www.gnu.org/licenses/gpl-3.0.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-i18n="footerLicenseName"
+            ></a>
+          </p>
+          <p id="footer-commit" class="footer__muted"></p>
+        </div>
+
+        <div class="footer__column">
+          <h2 class="footer__heading" data-i18n="footerBasemapHeading"></h2>
+          <p data-i18n="footerBasemapAttribution"></p>
+          <h2 class="footer__heading footer__heading--spaced" data-i18n="footerRendererHeading"></h2>
+          <p class="footer__muted" data-i18n="footerRenderer"></p>
+        </div>
+
+        <div class="footer__column footer__column--wide">
+          <h2 class="footer__heading" data-i18n="footerMethodHeading"></h2>
+          <p data-i18n="footerMethodology"></p>
+          <p id="footer-simplification" class="footer__muted"></p>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

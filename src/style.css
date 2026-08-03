@@ -1,0 +1,671 @@
+/*
+ * Layout: a fixed top bar, a full-bleed map, a sticky timeline and a footer
+ * below the fold. Both colour modes are declared explicitly; the map palette in
+ * src/colors.ts is stepped for each surface separately.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --surface: #fcfcfb;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f2f1ec;
+  --border: #d9d8d2;
+  --border-strong: #b6b5ad;
+  --text-primary: #14140f;
+  --text-secondary: #52514e;
+  --text-muted: #76756f;
+  --accent: #8a4b00;
+  --warn-surface: #fdf3e2;
+  --warn-border: #e0bd7c;
+  --warn-text: #5a3c05;
+  --error-text: #9a2b1f;
+  --shadow: 0 2px 12px rgb(20 20 15 / 12%);
+
+  --topbar-height: 3.75rem;
+  --timeline-height: 8.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #1a1a19;
+    --surface-raised: #232322;
+    --surface-sunken: #14140f;
+    --border: #3a3a37;
+    --border-strong: #55554f;
+    --text-primary: #f4f3ee;
+    --text-secondary: #c3c2b7;
+    --text-muted: #96958c;
+    --accent: #ffd54a;
+    --warn-surface: #2e2712;
+    --warn-border: #6b5620;
+    --warn-text: #f0dcae;
+    --error-text: #f0968a;
+    --shadow: 0 2px 14px rgb(0 0 0 / 45%);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/*
+ * Several elements below set an explicit `display`, which would otherwise beat
+ * the user-agent rule for `[hidden]` on specificity and leave banners visible
+ * after they have been hidden.
+ */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  text-decoration-color: currentcolor;
+}
+
+.app {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------------ topbar */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-raised);
+  min-height: var(--topbar-height);
+}
+
+.topbar__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.topbar__tagline {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.topbar__controls {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.control:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.control:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.control:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.control__state {
+  color: var(--text-muted);
+  font-variant: small-caps;
+}
+
+.control--icon {
+  min-width: 2.1rem;
+  justify-content: center;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.95rem;
+}
+
+/* ------------------------------------------------------------------- stage */
+
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 60vh;
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+}
+
+/* MapLibre paints its own background; keep our surface visible behind it. */
+.maplibregl-map {
+  font: inherit;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.status {
+  position: absolute;
+  z-index: 6;
+  top: 0.75rem;
+  left: 50%;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+  font-size: 0.82rem;
+  transform: translateX(-50%);
+}
+
+.status--error {
+  border-color: var(--error-text);
+  color: var(--error-text);
+}
+
+/* ------------------------------------------------------------------ legend */
+
+.legend {
+  position: absolute;
+  z-index: 4;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  max-width: min(21rem, calc(100% - 1.5rem));
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+  box-shadow: var(--shadow);
+}
+
+.legend__title {
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.legend__note {
+  margin: 0 0 0.45rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.legend__note--hint {
+  margin: 0.45rem 0 0;
+  color: var(--warn-text);
+}
+
+.legend__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend__item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+}
+
+.legend__item + .legend__item {
+  margin-top: 0.2rem;
+}
+
+.swatch {
+  width: 1.6rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, #0086be 55%, transparent);
+}
+
+.swatch--precise {
+  border: 1.5px solid #0086be;
+}
+
+.swatch--fuzzy {
+  border: 1.5px dashed #0086be;
+  background: color-mix(in srgb, #0086be 28%, transparent);
+}
+
+/* ------------------------------------------------------------------- panel */
+
+.panel {
+  position: absolute;
+  z-index: 7;
+  top: 0;
+  right: 0;
+  display: flex;
+  width: min(23rem, 100%);
+  height: 100%;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+  transform: translateX(100%);
+  transition: transform 180ms ease;
+}
+
+.panel--open {
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+  }
+}
+
+.panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.panel__close {
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.panel__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.panel__body {
+  overflow-y: auto;
+  padding: 0.75rem 0.9rem 1.5rem;
+}
+
+.panel__section {
+  margin: 1.1rem 0 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.panel__section:first-child {
+  margin-top: 0;
+}
+
+.panel__props {
+  margin: 0;
+}
+
+.prop {
+  display: grid;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--border);
+  gap: 0.15rem;
+}
+
+.prop__label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.prop__key {
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+}
+
+.prop__value {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.88rem;
+}
+
+.value--missing {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.value--raw {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+}
+
+.panel__hint,
+.panel__note {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.panel__note--warn {
+  color: var(--warn-text);
+}
+
+.panel__external {
+  display: inline-block;
+  font-size: 0.85rem;
+}
+
+/* -------------------------------------------------------------- disclaimer */
+
+.disclaimer {
+  display: flex;
+  /* Never let the map squeeze the banner into an unreadable sliver. */
+  flex-shrink: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--warn-border);
+  border-bottom: 1px solid var(--warn-border);
+  background: var(--warn-surface);
+  color: var(--warn-text);
+}
+
+.disclaimer__text p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+}
+
+.disclaimer__text strong {
+  font-size: 0.85rem;
+}
+
+.disclaimer__dismiss {
+  flex-shrink: 0;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--warn-border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+/* ---------------------------------------------------------------- timeline */
+
+.timeline {
+  position: sticky;
+  flex-shrink: 0;
+  z-index: 8;
+  bottom: 0;
+  padding: 0.6rem 1rem 0.75rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.timeline__readout {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.timeline__label {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.timeline__year {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.timeline__position,
+.timeline__features {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.timeline__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.timeline__track {
+  position: relative;
+  flex: 1 1 auto;
+  padding-bottom: 1.1rem;
+}
+
+.timeline__slider {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.timeline__slider:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.timeline__ticks {
+  position: relative;
+  height: 1rem;
+  margin-top: 0.15rem;
+}
+
+.tick {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transform: translateX(-50%);
+}
+
+.tick::before {
+  display: block;
+  width: 1px;
+  height: 5px;
+  margin: 0 auto;
+  background: var(--border-strong);
+  content: '';
+}
+
+.tick:hover::before,
+.tick--active::before {
+  width: 2px;
+  height: 8px;
+  background: var(--accent);
+}
+
+.tick:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.tick__label {
+  position: absolute;
+  top: 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* Declared after the base rule so these win: the end labels would otherwise be
+   clipped by the ends of the track. */
+.tick__label--first {
+  transform: none;
+}
+
+.tick__label--last {
+  transform: translateX(-100%);
+}
+
+.timeline__help {
+  margin: 0.55rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.timeline__help span + span {
+  margin-left: 0.4rem;
+}
+
+/* ------------------------------------------------------------------ footer */
+
+.footer {
+  display: grid;
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  gap: 1rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.footer__column--wide {
+  grid-column: span 2;
+}
+
+.footer__heading {
+  margin: 0 0 0.3rem;
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer__heading--spaced {
+  margin-top: 0.7rem;
+}
+
+.footer p {
+  margin: 0 0 0.25rem;
+}
+
+.footer__muted {
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------- narrow view */
+
+@media (max-width: 700px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .topbar__tagline {
+    display: none;
+  }
+
+  .legend {
+    display: none;
+  }
+
+  .panel {
+    width: 100%;
+  }
+
+  .stage {
+    min-height: 45vh;
+  }
+
+  .disclaimer {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  /* The sticky timeline overlays the foot of the banner, so the dismiss button
+     goes to the top where it is always reachable. */
+  .disclaimer__dismiss {
+    order: -1;
+    align-self: flex-end;
+  }
+
+  .disclaimer__text p {
+    font-size: 0.75rem;
+  }
+
+  .timeline__year {
+    font-size: 1.25rem;
+  }
+
+  .footer__column--wide {
+    grid-column: span 1;
+  }
+}

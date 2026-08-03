@@ -1,0 +1,401 @@
+import {
+  AttributionControl,
+  GeoJSONSource,
+  Map as MapLibreMap,
+  NavigationControl,
+  type ExpressionSpecification,
+  type LngLatBoundsLike,
+  type MapGeoJSONFeature,
+  type MapLayerMouseEvent,
+  type MapMouseEvent,
+  type Point,
+  type StyleSpecification,
+} from 'maplibre-gl';
+
+import { PRECISION_KEY, SLOT_KEY } from './data';
+import { palette, ungroupedColor, UNGROUPED_SLOT } from './colors';
+import { strings } from './strings';
+import type { SnapshotCollection } from './types';
+
+const SOURCE_ID = 'snapshot';
+const FILL_LAYER = 'territory-fill';
+const OUTLINE_PRECISE = 'territory-outline-precise';
+const OUTLINE_FUZZY = 'territory-outline-fuzzy';
+const HOVER_LAYER = 'territory-hover';
+const SELECTED_LAYER = 'territory-selected';
+const BASEMAP_LAYER = 'basemap';
+const BACKGROUND_LAYER = 'background';
+
+/**
+ * The opening view: continental Europe from the Atlantic to the Urals' western
+ * approaches, with the Mediterranean rim. The world files are never clipped —
+ * this only frames the first screen, and the user can pan anywhere.
+ */
+export const EUROPE_BOUNDS: LngLatBoundsLike = [
+  [-17, 34],
+  [42, 68],
+];
+
+/**
+ * A neutral, label-free raster basemap. Labels are deliberately avoided: modern
+ * place names printed under ancient borders are exactly the kind of anachronism
+ * the dataset authors warn about.
+ */
+const BASEMAP_TILES = [
+  'https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+  'https://b.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+  'https://c.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+  'https://d.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+];
+
+const EMPTY: SnapshotCollection = { type: 'FeatureCollection', features: [] };
+
+export interface MapCallbacks {
+  /**
+   * Receives the feature *index* rather than the rendered feature. MapLibre
+   * tiles GeoJSON internally and may drop null-valued properties along the way;
+   * the caller looks the index up in the originally parsed collection so the
+   * detail panel reports the record exactly as the dataset stores it, nulls
+   * included.
+   */
+  onSelect: (featureIndex: number | null) => void;
+}
+
+export class TerritoryMap {
+  private readonly map: MapLibreMap;
+  private readonly tooltip: HTMLElement;
+  private readonly callbacks: MapCallbacks;
+
+  private ready = false;
+  private pendingData: SnapshotCollection | null = null;
+  private hoveredId: number | null = null;
+  private selectedId: number | null = null;
+  private dark = false;
+  private basemapVisible = true;
+
+  constructor(container: HTMLElement, tooltip: HTMLElement, callbacks: MapCallbacks) {
+    this.tooltip = tooltip;
+    this.callbacks = callbacks;
+    this.dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    this.map = new MapLibreMap({
+      container,
+      style: this.buildStyle(),
+      bounds: EUROPE_BOUNDS,
+      fitBoundsOptions: { padding: 24 },
+      maxZoom: 10,
+      minZoom: 1,
+      dragRotate: false,
+      // Arrow keys step through snapshots (see src/timeline.ts); MapLibre's own
+      // keyboard panning would swallow them.
+      keyboard: false,
+      // The dataset is EPSG:4326 and is meant to be read as a flat basemap;
+      // rotation would only make the borders harder to compare.
+      pitchWithRotate: false,
+      attributionControl: false,
+    });
+
+    this.map.touchZoomRotate.disableRotation();
+    this.map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
+    this.map.addControl(
+      new AttributionControl({
+        compact: true,
+        customAttribution: strings.footerBasemapAttribution,
+      }),
+      'bottom-right',
+    );
+
+    // Gate on `style.load`, not `load`: `load` also waits for the initial
+    // basemap tiles, so an unreachable or blocked tile CDN would otherwise stop
+    // the borders — the actual subject of this map — from ever being drawn.
+    this.map.on('style.load', () => {
+      this.ready = true;
+      if (this.pendingData) {
+        this.setData(this.pendingData);
+        this.pendingData = null;
+      }
+    });
+
+    this.bindInteractions();
+
+    // The map fills a flex child whose height settles only after the timeline
+    // and footer have laid out; without this the canvas keeps its first,
+    // slightly short size and leaves a gap.
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => this.map.resize()).observe(container);
+    }
+  }
+
+  /* ------------------------------------------------------------------ style */
+
+  private buildStyle(): StyleSpecification {
+    return {
+      version: 8,
+      // No glyphs or sprite are declared: this map draws no text, so it needs
+      // neither, and avoids depending on a third-party font server.
+      sources: {
+        basemap: {
+          type: 'raster',
+          tiles: BASEMAP_TILES,
+          tileSize: 256,
+          maxzoom: 19,
+          attribution: strings.footerBasemapAttribution,
+        },
+        [SOURCE_ID]: {
+          type: 'geojson',
+          data: EMPTY,
+          // Ids come from the loader, not from a property.
+          generateId: false,
+        },
+      },
+      layers: [
+        {
+          id: BACKGROUND_LAYER,
+          type: 'background',
+          paint: { 'background-color': this.dark ? '#20201c' : '#f2f1ec' },
+        },
+        {
+          id: BASEMAP_LAYER,
+          type: 'raster',
+          source: 'basemap',
+          paint: {
+            'raster-opacity': 1,
+            // Ancient borders over a modern basemap read better when the base
+            // is desaturated and does not compete with the fills.
+            'raster-saturation': -0.6,
+            'raster-contrast': -0.1,
+          },
+        },
+        {
+          id: FILL_LAYER,
+          type: 'fill',
+          source: SOURCE_ID,
+          paint: {
+            'fill-color': this.fillColorExpression(),
+            'fill-opacity': this.fillOpacityExpression(),
+            'fill-antialias': true,
+          },
+        },
+        {
+          // Borders the dataset records as legally determined: crisp and solid.
+          id: OUTLINE_PRECISE,
+          type: 'line',
+          source: SOURCE_ID,
+          filter: ['>=', ['coalesce', ['get', PRECISION_KEY], 0], 3],
+          paint: {
+            'line-color': this.outlineColorExpression(),
+            'line-width': 1.1,
+            'line-opacity': 0.9,
+          },
+        },
+        {
+          // Approximate or unrecorded borders: dashed and faint, so that the
+          // uncertainty in the data is visible rather than hidden.
+          id: OUTLINE_FUZZY,
+          type: 'line',
+          source: SOURCE_ID,
+          filter: ['<', ['coalesce', ['get', PRECISION_KEY], 0], 3],
+          paint: {
+            'line-color': this.outlineColorExpression(),
+            'line-width': 1,
+            'line-opacity': 0.55,
+            'line-dasharray': [2, 2],
+          },
+        },
+        {
+          id: HOVER_LAYER,
+          type: 'line',
+          source: SOURCE_ID,
+          filter: ['==', ['id'], -1],
+          paint: {
+            'line-color': this.dark ? '#ffffff' : '#1a1a19',
+            'line-width': 2,
+            'line-opacity': 0.85,
+          },
+        },
+        {
+          id: SELECTED_LAYER,
+          type: 'line',
+          source: SOURCE_ID,
+          filter: ['==', ['id'], -1],
+          paint: {
+            'line-color': this.dark ? '#ffd54a' : '#8a4b00',
+            'line-width': 2.6,
+            'line-opacity': 1,
+          },
+        },
+      ],
+    };
+  }
+
+  /** `match` on the baked slot so the palette can swap without reloading data. */
+  private fillColorExpression(): ExpressionSpecification {
+    const colors = palette(this.dark);
+    const cases: unknown[] = ['match', ['coalesce', ['get', SLOT_KEY], UNGROUPED_SLOT]];
+    colors.forEach((color, index) => {
+      cases.push(index, color);
+    });
+    cases.push(ungroupedColor(this.dark));
+    return cases as unknown as ExpressionSpecification;
+  }
+
+  /**
+   * Opacity carries border precision: the less certain the dataset is, the more
+   * translucent the territory, so overlapping ancient areas read as overlapping
+   * rather than as a hard mosaic.
+   */
+  private fillOpacityExpression(): ExpressionSpecification {
+    return [
+      'case',
+      ['boolean', ['feature-state', 'hovered'], false],
+      0.85,
+      ['==', ['coalesce', ['get', PRECISION_KEY], -1], -1],
+      0.25,
+      ['>=', ['get', PRECISION_KEY], 3],
+      0.68,
+      ['>=', ['get', PRECISION_KEY], 2],
+      0.55,
+      0.42,
+    ] as unknown as ExpressionSpecification;
+  }
+
+  private outlineColorExpression(): ExpressionSpecification {
+    return this.fillColorExpression();
+  }
+
+  /* ----------------------------------------------------------- interaction */
+
+  private bindInteractions(): void {
+    this.map.on('mousemove', FILL_LAYER, (event: MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      if (!feature) return;
+      this.map.getCanvas().style.cursor = 'pointer';
+      this.setHovered(typeof feature.id === 'number' ? feature.id : null);
+      this.showTooltip(event.point, feature);
+    });
+
+    this.map.on('mouseleave', FILL_LAYER, () => {
+      this.map.getCanvas().style.cursor = '';
+      this.setHovered(null);
+      this.hideTooltip();
+    });
+
+    this.map.on('click', FILL_LAYER, (event: MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      if (!feature || typeof feature.id !== 'number') return;
+      this.select(feature.id);
+      this.callbacks.onSelect(feature.id);
+    });
+
+    // A click on empty ocean clears the selection.
+    this.map.on('click', (event: MapMouseEvent) => {
+      const hits = this.map.queryRenderedFeatures(event.point, { layers: [FILL_LAYER] });
+      if (hits.length === 0) {
+        this.select(null);
+        this.callbacks.onSelect(null);
+      }
+    });
+  }
+
+  private showTooltip(point: Point, feature: MapGeoJSONFeature): void {
+    const name = feature.properties?.NAME;
+    const label =
+      typeof name === 'string' && name.trim() !== ''
+        ? name.trim()
+        : strings.unnamedTerritory;
+
+    this.tooltip.textContent = label;
+    this.tooltip.hidden = false;
+
+    // Keep the tooltip inside the viewport near the right and bottom edges.
+    const { width, height } = this.tooltip.getBoundingClientRect();
+    const canvas = this.map.getCanvas();
+    const x = Math.min(point.x + 14, canvas.clientWidth - width - 8);
+    const y = Math.min(point.y + 14, canvas.clientHeight - height - 8);
+    this.tooltip.style.transform = `translate(${Math.max(8, x)}px, ${Math.max(8, y)}px)`;
+  }
+
+  private hideTooltip(): void {
+    this.tooltip.hidden = true;
+  }
+
+  private setHovered(id: number | null): void {
+    if (this.hoveredId === id) return;
+    if (this.hoveredId !== null) {
+      this.map.setFeatureState({ source: SOURCE_ID, id: this.hoveredId }, { hovered: false });
+    }
+    this.hoveredId = id;
+    if (id !== null) {
+      this.map.setFeatureState({ source: SOURCE_ID, id }, { hovered: true });
+    }
+    this.map.setFilter(HOVER_LAYER, ['==', ['id'], id ?? -1]);
+  }
+
+  /* -------------------------------------------------------------- public API */
+
+  get selectedFeatureId(): number | null {
+    return this.selectedId;
+  }
+
+  select(id: number | null): void {
+    this.selectedId = id;
+    if (this.ready) {
+      this.map.setFilter(SELECTED_LAYER, ['==', ['id'], id ?? -1]);
+    }
+  }
+
+  setData(collection: SnapshotCollection): void {
+    if (!this.ready) {
+      this.pendingData = collection;
+      return;
+    }
+    const source = this.map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
+    source?.setData(collection as GeoJSON.FeatureCollection);
+
+    // Feature ids are per-snapshot, so selection and hover cannot carry over.
+    this.hoveredId = null;
+    this.selectedId = null;
+    this.map.setFilter(HOVER_LAYER, ['==', ['id'], -1]);
+    this.map.setFilter(SELECTED_LAYER, ['==', ['id'], -1]);
+    this.hideTooltip();
+  }
+
+  clearData(): void {
+    this.setData({ type: 'FeatureCollection', features: [] });
+  }
+
+  setBasemapVisible(visible: boolean): void {
+    this.basemapVisible = visible;
+    if (!this.ready) {
+      this.map.once('style.load', () => this.setBasemapVisible(visible));
+      return;
+    }
+    this.map.setLayoutProperty(BASEMAP_LAYER, 'visibility', visible ? 'visible' : 'none');
+  }
+
+  isBasemapVisible(): boolean {
+    return this.basemapVisible;
+  }
+
+  setDark(dark: boolean): void {
+    if (this.dark === dark) return;
+    this.dark = dark;
+    if (!this.ready) return;
+
+    this.map.setPaintProperty(BACKGROUND_LAYER, 'background-color', dark ? '#20201c' : '#f2f1ec');
+    this.map.setPaintProperty(FILL_LAYER, 'fill-color', this.fillColorExpression());
+    for (const layer of [OUTLINE_PRECISE, OUTLINE_FUZZY]) {
+      this.map.setPaintProperty(layer, 'line-color', this.outlineColorExpression());
+    }
+    this.map.setPaintProperty(HOVER_LAYER, 'line-color', dark ? '#ffffff' : '#1a1a19');
+    this.map.setPaintProperty(SELECTED_LAYER, 'line-color', dark ? '#ffd54a' : '#8a4b00');
+  }
+
+  resetView(): void {
+    this.map.fitBounds(EUROPE_BOUNDS, { padding: 24, duration: 600 });
+  }
+
+  resize(): void {
+    this.map.resize();
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "historical-europe-map",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "description": "Interactive map of historical borders in Europe, built on the Historical Basemaps dataset.",
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:41729/git/andresavildspolsro/MISC"
+  },
+  "scripts": {
+    "data": "node scripts/fetch-data.mjs",
+    "data:force": "node scripts/fetch-data.mjs --force",
+    "data:simplified": "node scripts/fetch-data.mjs --simplify",
+    "dev": "npm run data && vite",
+    "build": "npm run data && tsc --noEmit && vite build",
+    "build:simplified": "npm run data:simplified && tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "maplibre-gl": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^26.1.2",
+    "mapshaper": "^0.7.50",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0"
+  }
+}
