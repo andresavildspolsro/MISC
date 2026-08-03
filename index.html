@@ -23,6 +23,10 @@
         </div>
 
         <div class="topbar__controls">
+          <label class="control control--select">
+            <span id="language-label" class="control__state"></span>
+            <select id="language-select" class="control__select"></select>
+          </label>
           <button id="basemap-toggle" class="control" type="button" aria-pressed="true">
             <span data-i18n="basemapToggle"></span>
             <span id="basemap-state" class="control__state"></span>
@@ -141,6 +145,7 @@
           <h2 class="footer__heading" data-i18n="footerMethodHeading"></h2>
           <p data-i18n="footerMethodology"></p>
           <p id="footer-simplification" class="footer__muted"></p>
+          <p class="footer__muted" data-i18n="footerLanguageNote"></p>
         </div>
       </footer>
     </div>

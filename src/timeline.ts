@@ -1,4 +1,4 @@
-import { formatYear, formatYearShort } from './format';
+import { formatCount, formatYear, formatYearShort } from './format';
 import { strings } from './strings';
 import type { ManifestSnapshot } from './types';
 
@@ -15,11 +15,8 @@ import type { ManifestSnapshot } from './types';
  * stated in the UI rather than left to be misread as a time axis.
  */
 
-/**
- * Horizontal room a year label needs before its neighbour starts touching it.
- * "123,000 BC" is the widest label the dataset produces.
- */
-const TICK_LABEL_WIDTH_PX = 76;
+/** Blank space kept between two neighbouring year labels. */
+const TICK_LABEL_GAP_PX = 14;
 
 const PLAY_INTERVAL_MS = 1600;
 
@@ -62,15 +59,8 @@ export class Timeline {
     this.slider.max = String(snapshots.length - 1);
     this.slider.step = '1';
     this.slider.value = '0';
-    this.slider.setAttribute('aria-label', strings.timelineLabel);
-
-    this.previousButton.setAttribute('aria-label', strings.previousSnapshot);
-    this.previousButton.title = strings.previousSnapshot;
-    this.nextButton.setAttribute('aria-label', strings.nextSnapshot);
-    this.nextButton.title = strings.nextSnapshot;
-    this.updatePlayButton();
-
     this.buildTicks();
+    this.applyLabels();
 
     // A range input already moves one step per arrow key, and one step is one
     // snapshot, so keyboard navigation snaps to real years for free.
@@ -107,15 +97,37 @@ export class Timeline {
     this.render();
   }
 
+  /** Re-applies every translated label. Called on start-up and on locale change. */
+  private applyLabels(): void {
+    this.slider.setAttribute('aria-label', strings.timelineLabel);
+    this.previousButton.setAttribute('aria-label', strings.previousSnapshot);
+    this.previousButton.title = strings.previousSnapshot;
+    this.nextButton.setAttribute('aria-label', strings.nextSnapshot);
+    this.nextButton.title = strings.nextSnapshot;
+    this.updatePlayButton();
+
+    for (const tick of this.ticksNode.querySelectorAll<HTMLElement>('.tick')) {
+      const year = this.snapshots[Number(tick.dataset.index)]?.year;
+      if (year === undefined) continue;
+      tick.setAttribute('aria-label', strings.goToYear(formatYear(year)));
+      tick.title = formatYear(year);
+    }
+  }
+
+  /** Language changed: era suffixes, number grouping and every label move with it. */
+  retranslate(): void {
+    this.applyLabels();
+    this.relabelTicks();
+    this.render();
+  }
+
   private buildTicks(): void {
-    this.snapshots.forEach((snapshot, index) => {
+    this.snapshots.forEach((_snapshot, index) => {
       const tick = document.createElement('button');
       tick.type = 'button';
       tick.className = 'tick';
       tick.style.left = `${this.positionOf(index)}%`;
       tick.dataset.index = String(index);
-      tick.setAttribute('aria-label', strings.goToYear(formatYear(snapshot.year)));
-      tick.title = formatYear(snapshot.year);
       tick.addEventListener('click', () => {
         this.stop();
         this.setIndex(index);
@@ -135,35 +147,53 @@ export class Timeline {
   }
 
   /**
-   * Labels as many ticks as fit at the current width. Every tick stays clickable
-   * and keeps its year in `title`/`aria-label`; only the printed subset thins
-   * out, so nothing is hidden from keyboard or screen-reader users.
+   * Labels as many ticks as fit, then prunes by measured geometry.
+   *
+   * An index-based rule cannot get this right on its own: era suffixes differ
+   * per language ("2000 BC" vs "2000 př. n. l.") and the two end labels are
+   * edge-aligned rather than centred, so the real test is whether the boxes
+   * actually touch. Every tick stays clickable and keeps its year in
+   * `title`/`aria-label`; only the printed subset thins out, so nothing is
+   * hidden from keyboard or screen-reader users.
    */
   private relabelTicks(): void {
     for (const label of this.ticksNode.querySelectorAll('.tick__label')) label.remove();
 
     const total = this.snapshots.length;
-    const width = this.ticksNode.clientWidth || 0;
-    const room = Math.max(2, Math.floor(width / TICK_LABEL_WIDTH_PX));
-    const labelEvery = Math.max(1, Math.ceil(total / room));
+    if (total === 0) return;
 
-    this.snapshots.forEach((snapshot, index) => {
-      // Always label the last tick; drop the one before it if they would collide.
-      const isLast = index === total - 1;
-      if (!isLast && index % labelEvery !== 0) return;
-      if (!isLast && total - 1 - index < labelEvery / 2) return;
-
+    const created = this.snapshots.map((snapshot, index) => {
       const label = document.createElement('span');
       label.className =
         index === 0
           ? 'tick__label tick__label--first'
-          : isLast
+          : index === total - 1
             ? 'tick__label tick__label--last'
             : 'tick__label';
       label.style.left = `${this.positionOf(index)}%`;
       label.textContent = formatYearShort(snapshot.year);
       label.setAttribute('aria-hidden', 'true');
       this.ticksNode.append(label);
+      return label;
+    });
+
+    // One layout flush, then pure reads.
+    const rects = created.map((label) => label.getBoundingClientRect());
+
+    const keep = new Set<number>([0, total - 1]);
+    let lastKeptRight = rects[0].right;
+    const finalLeft = rects[total - 1].left;
+
+    for (let index = 1; index < total - 1; index += 1) {
+      const rect = rects[index];
+      if (rect.left < lastKeptRight + TICK_LABEL_GAP_PX) continue;
+      if (rect.right > finalLeft - TICK_LABEL_GAP_PX) continue;
+      keep.add(index);
+      lastKeptRight = rect.right;
+    }
+
+    created.forEach((label, index) => {
+      if (!keep.has(index)) label.remove();
     });
   }
 
@@ -174,8 +204,8 @@ export class Timeline {
 
     this.yearNode.textContent = formatYear(snapshot.year);
     this.positionNode.textContent = strings.snapshotPosition(
-      this.index + 1,
-      this.snapshots.length,
+      formatCount(this.index + 1),
+      formatCount(this.snapshots.length),
     );
 
     this.previousButton.disabled = this.index === 0;

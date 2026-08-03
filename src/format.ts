@@ -1,13 +1,13 @@
 import { strings } from './strings';
 
 /**
- * Formats a dataset year for display.
+ * Formats a dataset year for display in the active language.
  *
  * The dataset stores BC years as negative numbers, where -1 means 1 BC (there
  * is no year zero in the BC/AD reckoning and the dataset has no year-0 file).
  * We therefore never map a negative year onto "0" or shift it by one — the
- * magnitude is shown as-is with a "BC" suffix, which is how the upstream
- * filenames (`world_bc2000.geojson`) are written.
+ * magnitude is shown as-is with the era suffix each language uses, which is how
+ * the upstream filenames (`world_bc2000.geojson`) are written.
  */
 export function formatYear(year: number): string {
   return year < 0 ? strings.yearBc(magnitude(year)) : strings.yearAd(magnitude(year));
@@ -15,7 +15,12 @@ export function formatYear(year: number): string {
 
 /** Compact form for dense timeline ticks. */
 export function formatYearShort(year: number): string {
-  return year < 0 ? `${magnitude(year)} BC` : magnitude(year);
+  return year < 0 ? strings.yearBc(magnitude(year)) : magnitude(year);
+}
+
+/** Grouped according to the active locale: 123,000 / 123 000 / 123.000. */
+export function formatCount(value: number): string {
+  return value.toLocaleString(strings.localeTag);
 }
 
 /**
@@ -26,12 +31,5 @@ export function formatYearShort(year: number): string {
  */
 function magnitude(year: number): string {
   const value = Math.abs(year);
-  return value >= 10000 ? value.toLocaleString('en') : String(value);
-}
-
-/** Human-readable byte size for the snapshot footnote. */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} kB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return value >= 10000 ? value.toLocaleString(strings.localeTag) : String(value);
 }

@@ -91,6 +91,7 @@ export class DetailPanel {
   private readonly root: HTMLElement;
   private readonly body: HTMLElement;
   private readonly titleNode: HTMLElement;
+  private readonly closeButton: HTMLButtonElement;
 
   constructor(root: HTMLElement, onClose: () => void) {
     this.root = root;
@@ -103,11 +104,17 @@ export class DetailPanel {
     close.setAttribute('aria-label', strings.panelClose);
     close.textContent = '×';
     close.addEventListener('click', onClose);
+    this.closeButton = close;
     header.append(this.titleNode, close);
 
     this.body = element('div', 'panel__body');
     this.root.append(header, this.body);
     this.showEmpty();
+  }
+
+  /** Language changed. The caller re-renders the body via show()/showEmpty(). */
+  retranslate(): void {
+    this.closeButton.setAttribute('aria-label', strings.panelClose);
   }
 
   showEmpty(): void {
@@ -166,7 +173,7 @@ export class DetailPanel {
 
     if (name !== strings.unnamedTerritory) {
       const search = element('a', 'panel__external');
-      search.href = `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(name)}`;
+      search.href = `https://${strings.wikipediaHost}/w/index.php?search=${encodeURIComponent(name)}`;
       search.target = '_blank';
       search.rel = 'noopener noreferrer';
       search.textContent = strings.wikipediaSearch(name);

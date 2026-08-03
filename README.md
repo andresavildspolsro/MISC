@@ -31,8 +31,13 @@ displayed as "not in dataset" rather than filled in.
   borders mislead.
 - **Pre-1648 banner** noting that fixed national boundaries are anachronistic in
   Europe before the Peace of Westphalia.
-- **Deep links.** `?year=1650` opens that snapshot. A year that is not in the
-  dataset is reported as missing, never rounded to a neighbour.
+- **Three languages** — English, Czech and Spanish — switchable from the top bar
+  without a reload. Era suffixes, number grouping and the Wikipedia host all
+  follow the choice (`1650` / `1650 n. l.` / `1650 d. C.`;
+  `123,000` / `123 000` / `123.000`).
+- **Deep links.** `?year=1650&lang=cs` opens that snapshot in that language. A
+  year that is not in the dataset is reported as missing, never rounded to a
+  neighbour.
 
 ## Licensing
 
@@ -100,9 +105,9 @@ node scripts/fetch-data.mjs --from ../historical-basemaps   # use a local checko
 3. Check the script's output. New years appear on the slider automatically —
    nothing in the app hard-codes a year list. If upstream adds a property, the
    detail panel already renders it verbatim; add a friendly label for it in
-   `propertyLabels` in `src/strings.ts` if you want one.
+   `propertyLabels` in each `src/i18n/*.ts` if you want one.
 4. If the licence warning fires, resolve it before deploying: the footer text in
-   `src/strings.ts` states GPL-3.0 explicitly.
+   `src/i18n/*.ts` states GPL-3.0 explicitly.
 
 The commit is shown in the site footer, so a visitor can tell exactly which
 version of the dataset they are looking at.
@@ -146,16 +151,44 @@ Vite + vanilla TypeScript, MapLibre GL JS, no framework and no server code.
 | `src/timeline.ts` | Snapshot-indexed slider, ticks, playback |
 | `src/panel.ts` | Detail panel; renders the property bag and nothing else |
 | `src/colors.ts` | Categorical palette and the hash that assigns it |
-| `src/format.ts` | BC/AD year formatting |
-| `src/strings.ts` | **Every** user-facing string |
+| `src/format.ts` | Locale-aware year and count formatting |
+| `src/strings.ts` | Active-locale accessor, `?lang=` / storage resolution |
+| `src/i18n/*.ts` | **Every** user-facing string, one file per language |
 | `src/main.ts` | Wiring, basemap defaults, disclaimer, deep links |
 
-### Adding a translation
+### Languages
 
-All UI copy lives in `src/strings.ts` behind a `Strings` interface. A Czech
-translation means adding a second object of that type and selecting it — no
-other module needs to change. `index.html` carries no copy either; its text
-nodes are filled from `strings` at start-up via `data-i18n`.
+English, Czech and Spanish ship today. The picker in the top bar switches
+between them with no page reload; the choice is remembered in `localStorage`
+and mirrored into `?lang=`. On first visit the language comes from `?lang=`,
+then a previous choice, then the browser's `Accept-Language`, then English.
+
+**Only the interface is translated.** Territory names, `SUBJECTO`, `PARTOF` and
+every other dataset value are always rendered exactly as the dataset stores
+them — translating them would mean displaying something the source does not
+say. The footer states this on the page. (The dataset also contains occasional
+typos, e.g. `Scottalnd` in the 1650 file; these are shown verbatim too, for the
+same reason.)
+
+To add a language:
+
+1. Copy `src/i18n/en.ts` to `src/i18n/<code>.ts` and translate the values. The
+   `Strings` interface in `src/i18n/types.ts` makes a missed key a type error.
+2. Set `localeTag` (drives number grouping and the `lang` attribute),
+   `localeName` (written in that language, so it is recognisable to someone who
+   cannot read the current UI language) and `wikipediaHost`.
+3. Register it in `LOCALES` in `src/strings.ts`. Nothing else changes — the
+   picker, the `?lang=` parser and the browser-preference fallback all read
+   that map.
+
+`strings` is an ES module live binding, so reassigning it in `setLocale`
+updates every importer; `App.retranslate()` then repaints the chrome. Note that
+year formatting is locale-dependent, so anything that prints a year must be
+re-rendered — `Timeline.retranslate()` re-measures and re-packs the tick labels
+because Czech and Spanish era suffixes are wider than the English ones.
+
+`index.html` carries no copy either; its text nodes are filled from `strings` at
+start-up via `data-i18n`.
 
 ### Notes on two implementation details
 

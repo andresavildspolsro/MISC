@@ -10,10 +10,18 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 setWorkerUrl(maplibreWorkerUrl);
 
 import { loadManifest, loadSnapshot, prefetchSnapshot } from './data';
-import { formatYear } from './format';
+import { formatCount, formatYear } from './format';
 import { TerritoryMap } from './map';
 import { DetailPanel } from './panel';
-import { strings } from './strings';
+import {
+  LOCALE_CODES,
+  LOCALES,
+  localeCode,
+  resolveInitialLocale,
+  setLocale,
+  strings,
+  type LocaleCode,
+} from './strings';
 import { Timeline } from './timeline';
 import type { Manifest, ManifestSnapshot, SnapshotCollection } from './types';
 
@@ -86,6 +94,8 @@ class App {
   private readonly basemapButton = requireElement<HTMLButtonElement>('#basemap-toggle');
   private readonly basemapStateNode = requireElement('#basemap-state');
   private readonly basemapHintNode = requireElement('#basemap-hint');
+  private readonly languageSelect = requireElement<HTMLSelectElement>('#language-select');
+  private readonly languageLabelNode = requireElement('#language-label');
 
   private collection: SnapshotCollection | null = null;
   private currentIndex = 0;
@@ -93,6 +103,8 @@ class App {
   private basemapManual = false;
   /** Guards against a slow snapshot landing after the user moved on. */
   private loadToken = 0;
+  /** Index of the feature the panel is showing, so it survives a language change. */
+  private selectedFeatureIndex: number | null = null;
 
   constructor(manifest: Manifest) {
     this.manifest = manifest;
@@ -118,6 +130,7 @@ class App {
 
     this.bindChrome();
     this.renderFooter();
+    this.languageLabelNode.textContent = strings.languageLabel;
 
     this.timeline.setIndex(initialIndex);
     void this.goTo(initialIndex).then(() => {
@@ -136,6 +149,19 @@ class App {
   /* ------------------------------------------------------------- chrome */
 
   private bindChrome(): void {
+    for (const code of LOCALE_CODES) {
+      const option = document.createElement('option');
+      option.value = code;
+      // Each language is named in its own language, so it is recognisable to
+      // someone who cannot read the language currently on screen.
+      option.textContent = LOCALES[code].localeName;
+      this.languageSelect.append(option);
+    }
+    this.languageSelect.value = localeCode;
+    this.languageSelect.addEventListener('change', () => {
+      this.setLanguage(this.languageSelect.value as LocaleCode);
+    });
+
     this.basemapButton.addEventListener('click', () => {
       this.basemapManual = true;
       this.setBasemap(!this.map.isBasemapVisible());
@@ -159,9 +185,57 @@ class App {
     window.addEventListener('resize', () => this.map.resize());
   }
 
+  private setLanguage(code: LocaleCode): void {
+    setLocale(code);
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', code);
+    window.history.replaceState(null, '', url);
+
+    this.retranslate();
+  }
+
+  /**
+   * Repaints every piece of chrome in the new language. Dataset values are not
+   * touched: the panel re-renders the same feature, whose properties are still
+   * shown exactly as the file stores them.
+   */
+  private retranslate(): void {
+    applyStaticStrings();
+    this.languageSelect.value = localeCode;
+    this.languageLabelNode.textContent = strings.languageLabel;
+    this.renderFooter();
+    this.timeline.retranslate();
+    this.panel.retranslate();
+
+    const snapshot = this.snapshots[this.currentIndex];
+    this.setBasemap(this.map.isBasemapVisible());
+    this.updateBasemapDefaultHint(snapshot.year);
+    requireElement('#reset-view').setAttribute('title', strings.resetViewTitle);
+
+    if (this.collection) {
+      this.featuresNode.textContent = strings.featureCount(
+        formatCount(this.collection.features.length),
+      );
+      this.setStatus(null);
+    } else {
+      this.setStatus(strings.loadError(formatYear(snapshot.year)), true);
+    }
+
+    const feature =
+      this.selectedFeatureIndex !== null
+        ? this.collection?.features[this.selectedFeatureIndex]
+        : undefined;
+    if (feature) {
+      this.panel.show(feature, snapshot);
+    } else {
+      this.panel.showEmpty();
+    }
+  }
+
   private renderFooter(): void {
     requireElement('#footer-commit').textContent = strings.footerSnapshotCommit(
-      this.manifest.generatedFrom.commit,
+      this.manifest.generatedFrom.commit.slice(0, 10),
     );
     requireElement('#footer-simplification').textContent = this.manifest.simplified
       ? strings.footerSimplified(this.manifest.simplified.tolerance)
@@ -189,6 +263,7 @@ class App {
     this.currentIndex = index;
     const token = ++this.loadToken;
 
+    this.selectedFeatureIndex = null;
     this.panel.setOpen(false);
     this.panel.showEmpty();
     this.updateDisclaimer(snapshot.year);
@@ -208,7 +283,9 @@ class App {
       this.collection = collection;
       this.map.setData(collection);
       this.setStatus(null);
-      this.featuresNode.textContent = strings.featureCount(collection.features.length);
+      this.featuresNode.textContent = strings.featureCount(
+        formatCount(collection.features.length),
+      );
     } catch (error) {
       if (token !== this.loadToken) return;
       console.error(error);
@@ -234,17 +311,21 @@ class App {
   }
 
   private updateBasemapDefault(year: number): void {
+    this.updateBasemapDefaultHint(year);
+    if (this.basemapManual) return;
+    this.setBasemap(year >= BASEMAP_AUTO_HIDE_BEFORE);
+  }
+
+  private updateBasemapDefaultHint(year: number): void {
     const showHint = year < BASEMAP_AUTO_HIDE_BEFORE;
     this.basemapHintNode.hidden = !showHint;
     this.basemapHintNode.textContent = showHint ? strings.basemapHintAncient : '';
-
-    if (this.basemapManual) return;
-    this.setBasemap(year >= BASEMAP_AUTO_HIDE_BEFORE);
   }
 
   /* ------------------------------------------------------------- panel */
 
   private handleSelect(featureIndex: number | null): void {
+    this.selectedFeatureIndex = featureIndex;
     if (featureIndex === null || !this.collection) {
       this.panel.setOpen(false);
       this.panel.showEmpty();
@@ -259,6 +340,7 @@ class App {
 
 /* -------------------------------------------------------------- bootstrap */
 
+setLocale(resolveInitialLocale());
 applyStaticStrings();
 
 loadManifest()
