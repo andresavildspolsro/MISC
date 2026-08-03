@@ -21,6 +21,8 @@ const SOURCE_ID = 'snapshot';
 const FILL_LAYER = 'territory-fill';
 const OUTLINE_PRECISE = 'territory-outline-precise';
 const OUTLINE_FUZZY = 'territory-outline-fuzzy';
+const HOVER_HALO_LAYER = 'territory-hover-halo';
+const HOVER_GLOW_LAYER = 'territory-hover-glow';
 const HOVER_LAYER = 'territory-hover';
 const SELECTED_LAYER = 'territory-selected';
 const BASEMAP_LAYER = 'basemap';
@@ -211,6 +213,38 @@ export class TerritoryMap {
           },
         },
         {
+          // Outermost and very faint: a contrast halo that guarantees the
+          // hovered border separates from whatever it happens to border,
+          // including a same-hue neighbour.
+          id: HOVER_HALO_LAYER,
+          type: 'line',
+          source: SOURCE_ID,
+          filter: ['==', ['id'], -1],
+          paint: {
+            'line-color': this.glowColor(),
+            'line-width': ['interpolate', ['linear'], ['zoom'], 2, 13, 6, 22],
+            'line-blur': ['interpolate', ['linear'], ['zoom'], 2, 9, 6, 15],
+            'line-opacity': 0.3,
+          },
+        },
+        {
+          // The glow itself, in the territory's own colour. `line-blur` spreads
+          // it into light rather than a second hard edge, so the hovered border
+          // lights up without gaining a heavier line.
+          id: HOVER_GLOW_LAYER,
+          type: 'line',
+          source: SOURCE_ID,
+          filter: ['==', ['id'], -1],
+          paint: {
+            'line-color': this.fillColorExpression(),
+            // Scaled by zoom: a halo sized for a whole country would swallow the
+            // small territories of a dense snapshot when zoomed out.
+            'line-width': ['interpolate', ['linear'], ['zoom'], 2, 9, 6, 16],
+            'line-blur': ['interpolate', ['linear'], ['zoom'], 2, 5, 6, 10],
+            'line-opacity': 0.9,
+          },
+        },
+        {
           id: HOVER_LAYER,
           type: 'line',
           source: SOURCE_ID,
@@ -269,6 +303,20 @@ export class TerritoryMap {
 
   private outlineColorExpression(): ExpressionSpecification {
     return this.fillColorExpression();
+  }
+
+  /**
+   * Colour of the faint outer separation halo.
+   *
+   * The hover highlight is two layers on purpose. A glow in the territory's own
+   * colour is the one that actually reads as light, but only where the
+   * surroundings contrast with that hue — a teal island glows nicely, a gold
+   * territory on a cream basemap beside other warm fills does not. This much
+   * fainter contrast halo sits underneath and guarantees separation in that
+   * case, without turning the highlight into a heavy drop shadow.
+   */
+  private glowColor(): string {
+    return this.dark ? '#ffffff' : '#241d05';
   }
 
   /* ----------------------------------------------------------- interaction */
@@ -336,8 +384,14 @@ export class TerritoryMap {
     if (id !== null) {
       this.map.setFeatureState({ source: SOURCE_ID, id }, { hovered: true });
     }
-    this.map.setFilter(HOVER_LAYER, ['==', ['id'], id ?? -1]);
+    this.setHoverFilter(id ?? -1);
     this.callbacks.onHover(id);
+  }
+
+  private setHoverFilter(id: number): void {
+    for (const layer of [HOVER_HALO_LAYER, HOVER_GLOW_LAYER, HOVER_LAYER]) {
+      this.map.setFilter(layer, ['==', ['id'], id]);
+    }
   }
 
   /* -------------------------------------------------------------- public API */
@@ -364,7 +418,7 @@ export class TerritoryMap {
     // Feature ids are per-snapshot, so selection and hover cannot carry over.
     this.hoveredId = null;
     this.selectedId = null;
-    this.map.setFilter(HOVER_LAYER, ['==', ['id'], -1]);
+    this.setHoverFilter(-1);
     this.map.setFilter(SELECTED_LAYER, ['==', ['id'], -1]);
     this.hideTooltip();
   }
@@ -393,9 +447,10 @@ export class TerritoryMap {
 
     this.map.setPaintProperty(BACKGROUND_LAYER, 'background-color', dark ? '#20201c' : '#f2f1ec');
     this.map.setPaintProperty(FILL_LAYER, 'fill-color', this.fillColorExpression());
-    for (const layer of [OUTLINE_PRECISE, OUTLINE_FUZZY]) {
+    for (const layer of [OUTLINE_PRECISE, OUTLINE_FUZZY, HOVER_GLOW_LAYER]) {
       this.map.setPaintProperty(layer, 'line-color', this.outlineColorExpression());
     }
+    this.map.setPaintProperty(HOVER_HALO_LAYER, 'line-color', this.glowColor());
     this.map.setPaintProperty(HOVER_LAYER, 'line-color', dark ? '#ffffff' : '#1a1a19');
     this.map.setPaintProperty(SELECTED_LAYER, 'line-color', dark ? '#ffd54a' : '#8a4b00');
   }

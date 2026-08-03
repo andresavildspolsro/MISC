@@ -29,7 +29,10 @@ displayed as "not in dataset" rather than filled in.
   note naming the file the geometry came from. A click *pins* the panel so it
   survives the pointer moving away; the panel says which of the two states it
   is in, so content changing under the cursor never looks arbitrary. Closing it
-  returns to hover previewing.
+  returns to hover previewing. The hovered border glows softly — a blurred halo
+  in the territory's own colour over a fainter contrast halo, so it reads as
+  light on a dark map and still separates a gold territory from its warm
+  neighbours on a light one.
 - **Basemap toggle.** The modern basemap is label-free, desaturated, and starts
   hidden before AD 1000, because modern coastlines and rivers under ancient
   borders mislead.
