@@ -46,6 +46,8 @@ export const cs: Strings = {
 
   panelClose: 'Zavřít',
   panelNoSelection: 'Vyberte území na mapě a zobrazí se jeho záznam z datové sady.',
+  panelPreviewHint: 'Náhled — kliknutím na území ho ukotvíte.',
+  panelPinnedHint: 'Ukotveno. Zavřením panelu se vrátíte k náhledu při najetí myší.',
   unnamedTerritory: 'Nepojmenované území',
   notInDataset: 'není v datové sadě',
 

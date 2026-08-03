@@ -46,6 +46,8 @@ export const en: Strings = {
 
   panelClose: 'Close',
   panelNoSelection: 'Select a territory on the map to see its dataset record.',
+  panelPreviewHint: 'Preview — click the territory to keep this open.',
+  panelPinnedHint: 'Pinned. Close this panel to go back to hover preview.',
   unnamedTerritory: 'Unnamed territory',
   notInDataset: 'not in dataset',
 

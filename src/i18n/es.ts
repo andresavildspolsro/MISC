@@ -47,6 +47,8 @@ export const es: Strings = {
   panelClose: 'Cerrar',
   panelNoSelection:
     'Selecciona un territorio en el mapa para ver su registro en el conjunto de datos.',
+  panelPreviewHint: 'Vista previa: haz clic en el territorio para fijarlo.',
+  panelPinnedHint: 'Fijado. Cierra el panel para volver a la vista previa al pasar el ratón.',
   unnamedTerritory: 'Territorio sin nombre',
   notInDataset: 'no está en el conjunto de datos',
 

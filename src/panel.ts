@@ -87,11 +87,14 @@ function renderRow(key: string, value: unknown): HTMLElement {
   return row;
 }
 
+export type PanelMode = 'preview' | 'pinned';
+
 export class DetailPanel {
   private readonly root: HTMLElement;
   private readonly body: HTMLElement;
   private readonly titleNode: HTMLElement;
   private readonly closeButton: HTMLButtonElement;
+  private readonly modeNode: HTMLElement;
 
   constructor(root: HTMLElement, onClose: () => void) {
     this.root = root;
@@ -107,8 +110,13 @@ export class DetailPanel {
     this.closeButton = close;
     header.append(this.titleNode, close);
 
+    // Says whether the panel is following the pointer or held by a click, so
+    // the content changing under the cursor never looks arbitrary.
+    this.modeNode = element('p', 'panel__mode');
+    this.modeNode.hidden = true;
+
     this.body = element('div', 'panel__body');
-    this.root.append(header, this.body);
+    this.root.append(header, this.modeNode, this.body);
     this.showEmpty();
   }
 
@@ -119,11 +127,18 @@ export class DetailPanel {
 
   showEmpty(): void {
     this.titleNode.textContent = strings.appTitle;
+    this.modeNode.hidden = true;
+    this.modeNode.classList.remove('panel__mode--pinned');
     this.body.innerHTML = '';
     this.body.append(element('p', 'panel__hint', strings.panelNoSelection));
   }
 
-  show(feature: SnapshotFeature, snapshot: ManifestSnapshot): void {
+  show(feature: SnapshotFeature, snapshot: ManifestSnapshot, mode: PanelMode): void {
+    this.modeNode.hidden = false;
+    this.modeNode.textContent =
+      mode === 'pinned' ? strings.panelPinnedHint : strings.panelPreviewHint;
+    this.modeNode.classList.toggle('panel__mode--pinned', mode === 'pinned');
+
     const properties = feature.properties ?? {};
     const rawName = properties.NAME;
     const name =

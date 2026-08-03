@@ -55,6 +55,10 @@ export interface Strings {
 
   panelClose: string;
   panelNoSelection: string;
+  /** Shown while the panel is following the pointer rather than a click. */
+  panelPreviewHint: string;
+  /** Shown once a click has pinned the panel to one territory. */
+  panelPinnedHint: string;
   unnamedTerritory: string;
   notInDataset: string;
 

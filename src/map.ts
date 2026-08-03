@@ -59,6 +59,14 @@ export interface MapCallbacks {
    * included.
    */
   onSelect: (featureIndex: number | null) => void;
+  /**
+   * Fires when the pointer crosses into a different territory, and with `null`
+   * when it leaves the map. Indices mean the same thing as in `onSelect`.
+   * MapLibre emits `mousemove` continuously, but this only fires on an actual
+   * change, so the panel re-renders once per border crossed rather than per
+   * pixel moved.
+   */
+  onHover: (featureIndex: number | null) => void;
 }
 
 export class TerritoryMap {
@@ -329,6 +337,7 @@ export class TerritoryMap {
       this.map.setFeatureState({ source: SOURCE_ID, id }, { hovered: true });
     }
     this.map.setFilter(HOVER_LAYER, ['==', ['id'], id ?? -1]);
+    this.callbacks.onHover(id);
   }
 
   /* -------------------------------------------------------------- public API */

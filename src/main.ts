@@ -41,6 +41,13 @@ const BASEMAP_AUTO_HIDE_BEFORE = 1000;
 
 const DISCLAIMER_DISMISSED_KEY = 'historical-map:disclaimer-dismissed';
 
+/**
+ * Grace period before a hover preview closes after the pointer leaves the map.
+ * Long enough to cross the gap onto the panel itself and read it, short enough
+ * that the panel does not linger once attention has moved on.
+ */
+const HOVER_CLOSE_DELAY_MS = 180;
+
 /* ------------------------------------------------------------------ helpers */
 
 function applyStaticStrings(): void {
@@ -103,8 +110,14 @@ class App {
   private basemapManual = false;
   /** Guards against a slow snapshot landing after the user moved on. */
   private loadToken = 0;
-  /** Index of the feature the panel is showing, so it survives a language change. */
-  private selectedFeatureIndex: number | null = null;
+  /**
+   * The panel has two states. `pinned` is set by a click and stays put while
+   * the pointer wanders; `preview` follows the pointer and only applies when
+   * nothing is pinned. Whichever is active is what a language change re-renders.
+   */
+  private pinnedFeatureIndex: number | null = null;
+  private previewFeatureIndex: number | null = null;
+  private hoverCloseTimer: number | null = null;
 
   constructor(manifest: Manifest) {
     this.manifest = manifest;
@@ -113,13 +126,13 @@ class App {
     this.map = new TerritoryMap(
       requireElement('#map'),
       requireElement('#tooltip'),
-      { onSelect: (index) => this.handleSelect(index) },
+      {
+        onSelect: (index) => this.handleSelect(index),
+        onHover: (index) => this.handleHover(index),
+      },
     );
 
-    this.panel = new DetailPanel(requireElement('#panel'), () => {
-      this.panel.setOpen(false);
-      this.map.select(null);
-    });
+    this.panel = new DetailPanel(requireElement('#panel'), () => this.clearSelection());
 
     const requested = indexFromLocation(this.snapshots);
     const initialIndex = requested.index ?? this.snapshots.length - 1;
@@ -182,6 +195,14 @@ class App {
     const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
     darkQuery.addEventListener('change', (event) => this.map.setDark(event.matches));
 
+    // Moving from the map onto the panel counts as still reading it, so the
+    // pending close is cancelled; leaving the panel restarts it.
+    const panelNode = requireElement('#panel');
+    panelNode.addEventListener('mouseenter', () => this.cancelHoverClose());
+    panelNode.addEventListener('mouseleave', () => {
+      if (this.pinnedFeatureIndex === null) this.scheduleHoverClose();
+    });
+
     window.addEventListener('resize', () => this.map.resize());
   }
 
@@ -222,12 +243,11 @@ class App {
       this.setStatus(strings.loadError(formatYear(snapshot.year)), true);
     }
 
+    const activeIndex = this.pinnedFeatureIndex ?? this.previewFeatureIndex;
     const feature =
-      this.selectedFeatureIndex !== null
-        ? this.collection?.features[this.selectedFeatureIndex]
-        : undefined;
+      activeIndex !== null ? this.collection?.features[activeIndex] : undefined;
     if (feature) {
-      this.panel.show(feature, snapshot);
+      this.panel.show(feature, snapshot, this.pinnedFeatureIndex !== null ? 'pinned' : 'preview');
     } else {
       this.panel.showEmpty();
     }
@@ -263,9 +283,7 @@ class App {
     this.currentIndex = index;
     const token = ++this.loadToken;
 
-    this.selectedFeatureIndex = null;
-    this.panel.setOpen(false);
-    this.panel.showEmpty();
+    this.clearSelection();
     this.updateDisclaimer(snapshot.year);
     this.updateBasemapDefault(snapshot.year);
 
@@ -324,17 +342,69 @@ class App {
 
   /* ------------------------------------------------------------- panel */
 
+  /** Click: pin this territory so it survives the pointer moving away. */
   private handleSelect(featureIndex: number | null): void {
-    this.selectedFeatureIndex = featureIndex;
-    if (featureIndex === null || !this.collection) {
-      this.panel.setOpen(false);
-      this.panel.showEmpty();
+    this.cancelHoverClose();
+
+    if (featureIndex === null) {
+      this.clearSelection();
       return;
     }
-    const feature = this.collection.features[featureIndex];
+    const feature = this.collection?.features[featureIndex];
     if (!feature) return;
-    this.panel.show(feature, this.snapshots[this.currentIndex]);
+
+    this.pinnedFeatureIndex = featureIndex;
+    this.previewFeatureIndex = null;
+    this.panel.show(feature, this.snapshots[this.currentIndex], 'pinned');
     this.panel.setOpen(true);
+  }
+
+  /**
+   * Hover: show the same record the click shows, without committing to it.
+   * A pinned territory wins — otherwise the panel would slide out from under
+   * someone who deliberately clicked it and then moved to read it.
+   */
+  private handleHover(featureIndex: number | null): void {
+    if (this.pinnedFeatureIndex !== null) return;
+
+    if (featureIndex === null) {
+      this.scheduleHoverClose();
+      return;
+    }
+
+    this.cancelHoverClose();
+    const feature = this.collection?.features[featureIndex];
+    if (!feature) return;
+
+    this.previewFeatureIndex = featureIndex;
+    this.panel.show(feature, this.snapshots[this.currentIndex], 'preview');
+    this.panel.setOpen(true);
+  }
+
+  private clearSelection(): void {
+    this.cancelHoverClose();
+    this.pinnedFeatureIndex = null;
+    this.previewFeatureIndex = null;
+    this.map.select(null);
+    this.panel.setOpen(false);
+    this.panel.showEmpty();
+  }
+
+  private scheduleHoverClose(): void {
+    this.cancelHoverClose();
+    this.hoverCloseTimer = window.setTimeout(() => {
+      this.hoverCloseTimer = null;
+      if (this.pinnedFeatureIndex !== null) return;
+      this.previewFeatureIndex = null;
+      this.panel.setOpen(false);
+      this.panel.showEmpty();
+    }, HOVER_CLOSE_DELAY_MS);
+  }
+
+  private cancelHoverClose(): void {
+    if (this.hoverCloseTimer === null) return;
+    window.clearTimeout(this.hoverCloseTimer);
+    this.hoverCloseTimer = null;
   }
 }
 

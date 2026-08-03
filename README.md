@@ -23,9 +23,13 @@ displayed as "not in dataset" rather than filled in.
 - **Visible uncertainty.** `BORDERPRECISION` drives fill opacity and outline
   style: borders the dataset records as legally determined are solid, and
   approximate ones are dashed and faded.
-- **Detail panel** listing every property the clicked feature carries, with the
-  raw key shown next to the human label so the panel can be audited against the
-  source file, plus a note naming the file the geometry came from.
+- **Detail panel on hover.** Pointing at a territory shows its full dataset
+  record beside the map — every property it carries, with the raw key next to
+  the human label so the panel can be audited against the source file, plus a
+  note naming the file the geometry came from. A click *pins* the panel so it
+  survives the pointer moving away; the panel says which of the two states it
+  is in, so content changing under the cursor never looks arbitrary. Closing it
+  returns to hover previewing.
 - **Basemap toggle.** The modern basemap is label-free, desaturated, and starts
   hidden before AD 1000, because modern coastlines and rivers under ancient
   borders mislead.
