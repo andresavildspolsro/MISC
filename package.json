@@ -20,13 +20,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "maplibre-gl": "^6.1.0"
+    "maplibre-gl": "6.1.0"
   },
   "devDependencies": {
-    "@types/geojson": "^7946.0.16",
-    "@types/node": "^26.1.2",
-    "mapshaper": "^0.7.50",
-    "typescript": "^7.0.2",
-    "vite": "^8.2.0"
+    "@types/geojson": "7946.0.16",
+    "@types/node": "26.1.2",
+    "mapshaper": "0.7.50",
+    "typescript": "7.0.2",
+    "vite": "8.2.0"
   }
 }
