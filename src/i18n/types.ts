@@ -52,6 +52,8 @@ export interface Strings {
 
   resetView: string;
   resetViewTitle: string;
+  resetWorld: string;
+  resetWorldTitle: string;
 
   panelClose: string;
   panelNoSelection: string;

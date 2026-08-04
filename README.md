@@ -1,7 +1,7 @@
-# Historical borders of Europe
+# Historical borders of the world
 
-An interactive map of historical political and cultural boundaries, from deep
-antiquity to 2010, with a time slider. Built on the open
+An interactive map of historical political and cultural boundaries worldwide,
+from deep antiquity to 2010, with a time slider. Built on the open
 [Historical Basemaps](https://github.com/aourednik/historical-basemaps) dataset
 by André Ourednik and contributors.
 
@@ -33,6 +33,8 @@ displayed as "not in dataset" rather than filled in.
   in the territory's own colour over a fainter contrast halo, so it reads as
   light on a dark map and still separates a gold territory from its warm
   neighbours on a light one.
+- **World by default**, with a one-click Europe view — Europe is where the
+  dataset is by far the most finely subdivided.
 - **Basemap toggle.** The modern basemap is label-free, desaturated, and starts
   hidden before AD 1000, because modern coastlines and rivers under ancient
   borders mislead.
@@ -82,9 +84,8 @@ npm run preview
    (`UPSTREAM.commit` at the top of the script) and caches it under
    `node_modules/.cache/`.
 2. Verifies the upstream `LICENSE` is still GPL v3, warning loudly if not.
-3. Copies every `geojson/world_*.geojson` into `public/data/`. World files are
-   **not clipped to Europe** — clipping risks introducing artefacts, so the map
-   just opens framed on Europe and lets you pan.
+3. Copies every `geojson/world_*.geojson` into `public/data/`. Files are
+   **never clipped** — clipping risks introducing artefacts.
 4. Parses each snapshot year from its filename (`world_1650` → 1650,
    `world_bc2000` → −2000). A file whose name does not parse is skipped with a
    warning; there is no fallback that would guess a year.
@@ -145,6 +146,51 @@ Trade-offs, so the choice is made with open eyes:
 
 The manifest records whether the data was simplified and at what tolerance, and
 the footer says so on the page.
+
+## How coverage varies
+
+The dataset is worldwide in every snapshot, but how finely it divides the world
+is not uniform. Measured across all 53 snapshots (17,521 polygons, binned into
+coarse regions by area-weighted centroid):
+
+| Region | Median territory | Polygons | Distinct names |
+|---|---:|---:|---:|
+| Europe | 2,914 km² | 3,307 | 444 |
+| Americas | 8,741 km² | 6,215 | 1,519 |
+| SE Asia + Oceania | 14,096 km² | 2,931 | 421 |
+| Asia | 29,916 km² | 2,400 | 338 |
+| Africa + Middle East | 125,695 km² | 1,850 | 300 |
+
+So a typical mapped territory in Africa is some 40× larger than one in Europe.
+The shapes are there; they are simply much coarser. The Americas carry the most
+distinct names of any region, mostly indigenous territories in AD 500–1500.
+
+Share of mapped **area** left unnamed (counting polygons misleads — in Europe
+the unnamed ones are mostly tiny islands: in 2010 their median is 357 km² and
+they are 0.2% of European area):
+
+| | pre-1000 BC | 1000 BC – AD 500 | AD 500–1500 | AD 1500–1900 | AD 1900+ |
+|---|---:|---:|---:|---:|---:|
+| Europe | 66% | 55% | 25% | 2% | 1% |
+| Africa + Middle East | 21% | 21% | 25% | **68%** | 7% |
+| Asia | 78% | 19% | 4% | 4% | 0% |
+| Americas | 76% | 14% | 24% | 18% | 0% |
+| SE Asia + Oceania | 22% | 16% | 11% | 1% | 0% |
+
+Two things worth knowing about `BORDERPRECISION`:
+
+- **It tracks period, not regional research quality.** Value 3 is used for 0% of
+  features before AD 1500 in every region, and 100% of features after 1900 in
+  every region. It says "this is the modern era", not "this border is well
+  established here".
+- **The middle of the scale is essentially unused.** Across all 53 files: value
+  1 appears 11,046 times, value 3 appears 6,468 times, value 2 appears **twice**,
+  an undocumented value 0 appears 4 times, and one feature has none. In practice
+  the scale is binary.
+
+The footer states that subdivision detail varies by region and period. Regional
+binning above is by centroid against rough boxes — the point is the order of
+magnitude, not the third decimal.
 
 ## Architecture
 

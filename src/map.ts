@@ -29,10 +29,16 @@ const BASEMAP_LAYER = 'basemap';
 const BACKGROUND_LAYER = 'background';
 
 /**
- * The opening view: continental Europe from the Atlantic to the Urals' western
- * approaches, with the Mediterranean rim. The world files are never clipped —
- * this only frames the first screen, and the user can pan anywhere.
+ * The opening view. The dataset is worldwide and is never clipped, so the map
+ * opens on the whole world; Europe is one click away and is where the data is
+ * most finely subdivided.
  */
+export const WORLD_BOUNDS: LngLatBoundsLike = [
+  [-179, -60],
+  [179, 79],
+];
+
+/** Continental Europe from the Atlantic to the western approaches of the Urals. */
 export const EUROPE_BOUNDS: LngLatBoundsLike = [
   [-17, 34],
   [42, 68],
@@ -91,10 +97,16 @@ export class TerritoryMap {
     this.map = new MapLibreMap({
       container,
       style: this.buildStyle(),
-      bounds: EUROPE_BOUNDS,
-      fitBoundsOptions: { padding: 24 },
+      bounds: WORLD_BOUNDS,
+      fitBoundsOptions: { padding: 12 },
       maxZoom: 10,
-      minZoom: 1,
+      minZoom: 0,
+      // World copies stay on. With them off, MapLibre clamps the zoom so that
+      // one world fills the viewport width, and on a wide, short map panel that
+      // crops the southern hemisphere out of the default view. Seeing every
+      // mapped territory at a glance matters more than the wrapped copies that
+      // appear beside it.
+      renderWorldCopies: true,
       dragRotate: false,
       // Arrow keys step through snapshots (see src/timeline.ts); MapLibre's own
       // keyboard panning would swallow them.
@@ -457,6 +469,10 @@ export class TerritoryMap {
 
   resetView(): void {
     this.map.fitBounds(EUROPE_BOUNDS, { padding: 24, duration: 600 });
+  }
+
+  resetWorldView(): void {
+    this.map.fitBounds(WORLD_BOUNDS, { padding: 12, duration: 600 });
   }
 
   resize(): void {

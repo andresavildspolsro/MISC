@@ -7,7 +7,7 @@ export const cs: Strings = {
 
   languageLabel: 'Jazyk',
 
-  appTitle: 'Historické hranice Evropy',
+  appTitle: 'Historické hranice světa',
   appTagline: 'Politické a kulturní hranice, snímek po snímku',
 
   loading: 'Načítání…',
@@ -43,6 +43,9 @@ export const cs: Strings = {
 
   resetView: 'Evropa',
   resetViewTitle: 'Vrátit pohled na Evropu',
+
+  resetWorld: 'Svět',
+  resetWorldTitle: 'Zobrazit celý svět',
 
   panelClose: 'Zavřít',
   panelNoSelection: 'Vyberte území na mapě a zobrazí se jeho záznam z datové sady.',
@@ -112,7 +115,7 @@ export const cs: Strings = {
   footerRenderer: 'Vykresleno pomocí MapLibre GL JS, licence BSD-3-Clause.',
   footerMethodHeading: 'Metodika',
   footerMethodology:
-    'Hranice jsou historické odhady z otevřené odborné datové sady; jejich přesnost se liší a zobrazuje se u každého území. Snímky jsou nespojité — tento web mezi nimi nikdy neinterpoluje.',
+    'Hranice jsou historické odhady z otevřené odborné datové sady; jejich přesnost se liší a zobrazuje se u každého území. Snímky jsou nespojité — tento web mezi nimi nikdy neinterpoluje. Podrobnost dělení se navíc liší podle regionu a období: mimo Evropu jsou území zpravidla zakreslena jako mnohem větší celky.',
   footerSimplified: (tolerance) =>
     `Geometrie zjednodušena při sestavení (mapshaper, ${tolerance}) kvůli rychlosti načítání.`,
   footerUnsimplified:

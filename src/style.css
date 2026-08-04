@@ -117,7 +117,9 @@ a:hover {
 
 .topbar__controls {
   display: flex;
+  flex-wrap: wrap;
   flex-shrink: 0;
+  justify-content: flex-end;
   gap: 0.5rem;
 }
 
@@ -664,6 +666,16 @@ a:hover {
   }
 
   .topbar__tagline {
+    display: none;
+  }
+
+  .topbar__controls {
+    flex-shrink: 1;
+  }
+
+  /* The language names in the select identify it well enough; the word
+     "Language" is what pushes the fourth control off a narrow screen. */
+  .control--select #language-label {
     display: none;
   }
 

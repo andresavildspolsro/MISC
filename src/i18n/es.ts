@@ -7,7 +7,7 @@ export const es: Strings = {
 
   languageLabel: 'Idioma',
 
-  appTitle: 'Fronteras históricas de Europa',
+  appTitle: 'Fronteras históricas del mundo',
   appTagline: 'Fronteras políticas y culturales, instantánea a instantánea',
 
   loading: 'Cargando…',
@@ -43,6 +43,9 @@ export const es: Strings = {
 
   resetView: 'Europa',
   resetViewTitle: 'Restablecer la vista a Europa',
+
+  resetWorld: 'Mundo',
+  resetWorldTitle: 'Restablecer la vista al mundo entero',
 
   panelClose: 'Cerrar',
   panelNoSelection:
@@ -113,7 +116,7 @@ export const es: Strings = {
   footerRenderer: 'Renderizado con MapLibre GL JS, licencia BSD-3-Clause.',
   footerMethodHeading: 'Método',
   footerMethodology:
-    'Las fronteras son aproximaciones históricas de un conjunto de datos académico abierto; su precisión varía y se indica en cada territorio. Las instantáneas son discretas: este sitio nunca interpola entre ellas.',
+    'Las fronteras son aproximaciones históricas de un conjunto de datos académico abierto; su precisión varía y se indica en cada territorio. Las instantáneas son discretas: este sitio nunca interpola entre ellas. El grado de subdivisión también varía según la región y el periodo: fuera de Europa, los territorios suelen estar cartografiados como unidades mucho mayores.',
   footerSimplified: (tolerance) =>
     `Geometría simplificada en la compilación (mapshaper, ${tolerance}) para acelerar la carga.`,
   footerUnsimplified:

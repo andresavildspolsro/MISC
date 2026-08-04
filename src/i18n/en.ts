@@ -7,7 +7,7 @@ export const en: Strings = {
 
   languageLabel: 'Language',
 
-  appTitle: 'Historical borders of Europe',
+  appTitle: 'Historical borders of the world',
   appTagline: 'Political and cultural boundaries, snapshot by snapshot',
 
   loading: 'Loading…',
@@ -43,6 +43,9 @@ export const en: Strings = {
 
   resetView: 'Europe',
   resetViewTitle: 'Reset the view to Europe',
+
+  resetWorld: 'World',
+  resetWorldTitle: 'Reset the view to the whole world',
 
   panelClose: 'Close',
   panelNoSelection: 'Select a territory on the map to see its dataset record.',
@@ -112,7 +115,7 @@ export const en: Strings = {
   footerRenderer: 'Rendered with MapLibre GL JS, licensed BSD-3-Clause.',
   footerMethodHeading: 'Method',
   footerMethodology:
-    'Borders are historical approximations from an open scholarly dataset; precision varies and is displayed per territory. Snapshots are discrete — this site never interpolates between them.',
+    'Borders are historical approximations from an open scholarly dataset; precision varies and is displayed per territory. Snapshots are discrete — this site never interpolates between them. How finely the world is subdivided also varies by region and period: outside Europe, territories are typically mapped as much larger units.',
   footerSimplified: (tolerance) =>
     `Geometry simplified at build time (mapshaper, ${tolerance}) for load speed.`,
   footerUnsimplified: 'Geometry is served exactly as published upstream, unsimplified.',

@@ -142,6 +142,7 @@ class App {
     });
 
     this.bindChrome();
+    this.applyViewButtonTitles();
     this.renderFooter();
     this.languageLabelNode.textContent = strings.languageLabel;
 
@@ -181,7 +182,7 @@ class App {
     });
 
     requireElement('#reset-view').addEventListener('click', () => this.map.resetView());
-    requireElement('#reset-view').setAttribute('title', strings.resetViewTitle);
+    requireElement('#reset-world').addEventListener('click', () => this.map.resetWorldView());
 
     requireElement('#disclaimer-dismiss').addEventListener('click', () => {
       try {
@@ -232,7 +233,7 @@ class App {
     const snapshot = this.snapshots[this.currentIndex];
     this.setBasemap(this.map.isBasemapVisible());
     this.updateBasemapDefaultHint(snapshot.year);
-    requireElement('#reset-view').setAttribute('title', strings.resetViewTitle);
+    this.applyViewButtonTitles();
 
     if (this.collection) {
       this.featuresNode.textContent = strings.featureCount(
@@ -251,6 +252,11 @@ class App {
     } else {
       this.panel.showEmpty();
     }
+  }
+
+  private applyViewButtonTitles(): void {
+    requireElement('#reset-view').setAttribute('title', strings.resetViewTitle);
+    requireElement('#reset-world').setAttribute('title', strings.resetWorldTitle);
   }
 
   private renderFooter(): void {
