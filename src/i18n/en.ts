@@ -40,7 +40,7 @@ export const en: Strings = {
   yearJumpTitle: 'Go to a year — click and type',
   yearJumpPlaceholder: 'e.g. 1416, negative = BC',
   nearestSnapshotShown: (requested, shown) =>
-    `The dataset has no snapshot for ${requested}; showing the nearest one, ${shown}.`,
+    `The dataset has no snapshot for ${requested}; showing the nearest one (${shown}).`,
 
   basemapToggle: 'Modern basemap',
   basemapOn: 'on',

@@ -40,7 +40,7 @@ export const cs: Strings = {
   yearJumpTitle: 'Přejít na rok — klikni a napiš',
   yearJumpPlaceholder: 'např. 1416, záporné = př. n. l.',
   nearestSnapshotShown: (requested, shown) =>
-    `Pro rok ${requested} datová sada snímek nemá; zobrazen nejbližší, ${shown}.`,
+    `Pro rok ${requested} datová sada snímek nemá; zobrazen nejbližší (${shown}).`,
 
   basemapToggle: 'Moderní podklad',
   basemapOn: 'zap.',

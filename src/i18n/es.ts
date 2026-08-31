@@ -40,7 +40,7 @@ export const es: Strings = {
   yearJumpTitle: 'Ir a un año: haz clic y escribe',
   yearJumpPlaceholder: 'p. ej. 1416, negativo = a. C.',
   nearestSnapshotShown: (requested, shown) =>
-    `El conjunto de datos no tiene instantánea de ${requested}; se muestra la más cercana, ${shown}.`,
+    `El conjunto de datos no tiene instantánea de ${requested}; se muestra la más cercana (${shown}).`,
 
   basemapToggle: 'Mapa base moderno',
   basemapOn: 'activo',

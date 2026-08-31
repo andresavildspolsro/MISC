@@ -46,9 +46,20 @@ displayed as "not in dataset" rather than filled in.
   without a reload. Era suffixes, number grouping and the Wikipedia host all
   follow the choice (`1650` / `1650 n. l.` / `1650 d. C.`;
   `123,000` / `123 000` / `123.000`).
+- **Go to a year.** Clicking the big year readout opens a type-a-year box with
+  every real snapshot year suggested. A typed year with no snapshot lands on
+  the nearest one — and says so; it is a navigation request, not a claim about
+  that year.
 - **Deep links.** `?year=1650&lang=cs` opens that snapshot in that language. A
   year that is not in the dataset is reported as missing, never rounded to a
-  neighbour.
+  neighbour — unlike the interactive jump, a shared link claims a specific year.
+- **Interesting facts (dormant).** `src/facts.ts` holds a curated, reviewed
+  list of historical asides shown behind an explicit toggle, in their own card
+  with a permanent "added context — not part of the dataset" label. Each entry
+  is expected to cite an external source; entries without one render with an
+  "unverified" warning. The toggle does not exist in the UI until the list has
+  entries. LLM-drafted text counts as unsourced until a checkable reference
+  backs it.
 
 ## Licensing
 

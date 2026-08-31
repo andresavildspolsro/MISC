@@ -10,6 +10,8 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 setWorkerUrl(maplibreWorkerUrl);
 
 import { loadManifest, loadSnapshot, prefetchSnapshot } from './data';
+import { FACTS, factsForYear } from './facts';
+import { FactsCard } from './factsCard';
 import { formatCount, formatYear } from './format';
 import { TerritoryMap } from './map';
 import { DetailPanel } from './panel';
@@ -40,6 +42,7 @@ const WESTPHALIA = 1648;
 const BASEMAP_AUTO_HIDE_BEFORE = 1000;
 
 const DISCLAIMER_DISMISSED_KEY = 'historical-map:disclaimer-dismissed';
+const FACTS_OPEN_KEY = 'historical-map:facts-open';
 
 /**
  * Grace period before a hover preview closes after the pointer leaves the map.
@@ -113,6 +116,9 @@ class App {
   private readonly basemapHintNode = requireElement('#basemap-hint');
   private readonly languageSelect = requireElement<HTMLSelectElement>('#language-select');
   private readonly languageLabelNode = requireElement('#language-label');
+  private readonly factsToggle = requireElement<HTMLButtonElement>('#facts-toggle');
+  private readonly factsCard = new FactsCard(requireElement('#facts'));
+  private factsOpen = false;
 
   private collection: SnapshotCollection | null = null;
   private currentIndex = 0;
@@ -120,6 +126,9 @@ class App {
   private basemapManual = false;
   /** Guards against a slow snapshot landing after the user moved on. */
   private loadToken = 0;
+  /** Message to show once the next snapshot has loaded (e.g. nearest-year note). */
+  private pendingNotice: string | null = null;
+  private noticeTimer: number | null = null;
   /**
    * The panel has two states. `pinned` is set by a click and stays put while
    * the pointer wanders; `preview` follows the pointer and only applies when
@@ -152,6 +161,18 @@ class App {
 
     this.timeline = new Timeline(requireElement('#timeline'), this.snapshots, {
       onChange: (index) => void this.goTo(index),
+      onNearestJump: (requestedYear, landedIndex) => {
+        const message = strings.nearestSnapshotShown(
+          formatYear(requestedYear),
+          formatYear(this.snapshots[landedIndex].year),
+        );
+        if (landedIndex === this.currentIndex) {
+          // No navigation will happen, so no goTo() will deliver the notice.
+          this.showTransient(message);
+        } else {
+          this.pendingNotice = message;
+        }
+      },
     });
 
     this.bindChrome();
@@ -206,6 +227,35 @@ class App {
       this.disclaimerNode.hidden = true;
     });
 
+    // A fact tied to a year with no snapshot can never render; say so loudly
+    // in the console instead of letting the entry rot unnoticed.
+    const knownYears = new Set(this.snapshots.map((snapshot) => snapshot.year));
+    for (const fact of FACTS) {
+      const orphaned = fact.years.filter((year) => !knownYears.has(year));
+      if (orphaned.length > 0) {
+        console.warn(`fact "${fact.id}" references non-dataset years: ${orphaned.join(', ')}`);
+      }
+    }
+
+    // Facts stay entirely dormant until the curated list actually has entries.
+    if (FACTS.length > 0) {
+      this.factsToggle.hidden = false;
+      try {
+        this.factsOpen = window.localStorage.getItem(FACTS_OPEN_KEY) === '1';
+      } catch {
+        /* per-session default only */
+      }
+      this.factsToggle.addEventListener('click', () => {
+        this.factsOpen = !this.factsOpen;
+        try {
+          window.localStorage.setItem(FACTS_OPEN_KEY, this.factsOpen ? '1' : '0');
+        } catch {
+          /* fine */
+        }
+        this.refreshFacts();
+      });
+    }
+
     const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
     darkQuery.addEventListener('change', (event) => this.map.setDark(event.matches));
 
@@ -242,6 +292,7 @@ class App {
     this.renderFooter();
     this.timeline.retranslate();
     this.panel.retranslate();
+    this.refreshFacts();
 
     const snapshot = this.snapshots[this.currentIndex];
     this.setBasemap(this.map.isBasemapVisible());
@@ -267,6 +318,17 @@ class App {
     }
   }
 
+  /** Updates the toggle label/count and the card for the current snapshot. */
+  private refreshFacts(): void {
+    if (FACTS.length === 0) return;
+    const year = this.snapshots[this.currentIndex].year;
+    const count = factsForYear(year).length;
+    this.factsToggle.textContent = `${strings.factsToggle} (${count})`;
+    this.factsToggle.setAttribute('aria-pressed', this.factsOpen ? 'true' : 'false');
+    if (this.factsOpen) this.factsCard.render(year);
+    this.factsCard.setOpen(this.factsOpen);
+  }
+
   private applyViewButtonTitles(): void {
     requireElement('#reset-view').setAttribute('title', strings.resetViewTitle);
     requireElement('#reset-world').setAttribute('title', strings.resetWorldTitle);
@@ -288,9 +350,19 @@ class App {
   }
 
   private setStatus(message: string | null, isError = false): void {
+    if (this.noticeTimer !== null) {
+      window.clearTimeout(this.noticeTimer);
+      this.noticeTimer = null;
+    }
     this.statusNode.hidden = message === null;
     this.statusNode.textContent = message ?? '';
     this.statusNode.classList.toggle('status--error', isError);
+  }
+
+  /** An informational status that goes away on its own. */
+  private showTransient(message: string): void {
+    this.setStatus(message);
+    this.noticeTimer = window.setTimeout(() => this.setStatus(null), 7000);
   }
 
   /* --------------------------------------------------------- navigation */
@@ -305,6 +377,7 @@ class App {
     this.clearSelection();
     this.updateDisclaimer(snapshot.year);
     this.updateBasemapDefault(snapshot.year);
+    this.refreshFacts();
 
     const url = new URL(window.location.href);
     url.searchParams.set('year', String(snapshot.year));
@@ -319,7 +392,12 @@ class App {
 
       this.collection = collection;
       this.map.setData(collection);
-      this.setStatus(null);
+      if (this.pendingNotice) {
+        this.showTransient(this.pendingNotice);
+        this.pendingNotice = null;
+      } else {
+        this.setStatus(null);
+      }
       this.featuresNode.textContent = strings.featureCount(
         formatCount(collection.features.length),
       );

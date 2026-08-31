@@ -64,6 +64,8 @@
           aria-hidden="true"
           aria-label="Territory details"
         ></aside>
+
+        <aside id="facts" class="facts" hidden></aside>
       </main>
 
       <section
@@ -88,9 +90,28 @@
       <section id="timeline" class="timeline">
         <div class="timeline__readout">
           <span class="timeline__label" data-i18n="showingYear"></span>
-          <output id="timeline-year" class="timeline__year"></output>
+          <button id="timeline-year" class="timeline__year" type="button"></button>
+          <form id="year-jump" class="timeline__jump" hidden>
+            <input
+              id="year-jump-input"
+              class="timeline__jump-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              spellcheck="false"
+              list="year-jump-options"
+            />
+            <datalist id="year-jump-options"></datalist>
+          </form>
           <span id="timeline-position" class="timeline__position"></span>
           <span id="timeline-features" class="timeline__features"></span>
+          <button
+            id="facts-toggle"
+            class="control control--facts"
+            type="button"
+            aria-pressed="false"
+            hidden
+          ></button>
         </div>
 
         <div class="timeline__controls">

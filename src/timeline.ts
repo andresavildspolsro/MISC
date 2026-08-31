@@ -22,6 +22,12 @@ const PLAY_INTERVAL_MS = 1600;
 
 export interface TimelineCallbacks {
   onChange: (index: number) => void;
+  /**
+   * A typed year that is not a dataset year lands on the nearest snapshot.
+   * This reports the substitution so the app can say it out loud — silent
+   * nearest-matching is exactly what this site promises not to do.
+   */
+  onNearestJump: (requestedYear: number, landedIndex: number) => void;
 }
 
 export class Timeline {
@@ -32,7 +38,10 @@ export class Timeline {
   private readonly playButton: HTMLButtonElement;
   private readonly previousButton: HTMLButtonElement;
   private readonly nextButton: HTMLButtonElement;
-  private readonly yearNode: HTMLElement;
+  private readonly yearNode: HTMLButtonElement;
+  private readonly jumpForm: HTMLFormElement;
+  private readonly jumpInput: HTMLInputElement;
+  private readonly jumpOptions: HTMLDataListElement;
   private readonly positionNode: HTMLElement;
   private readonly ticksNode: HTMLElement;
 
@@ -51,7 +60,10 @@ export class Timeline {
     this.playButton = root.querySelector<HTMLButtonElement>('#timeline-play')!;
     this.previousButton = root.querySelector<HTMLButtonElement>('#timeline-prev')!;
     this.nextButton = root.querySelector<HTMLButtonElement>('#timeline-next')!;
-    this.yearNode = root.querySelector<HTMLElement>('#timeline-year')!;
+    this.yearNode = root.querySelector<HTMLButtonElement>('#timeline-year')!;
+    this.jumpForm = root.querySelector<HTMLFormElement>('#year-jump')!;
+    this.jumpInput = root.querySelector<HTMLInputElement>('#year-jump-input')!;
+    this.jumpOptions = root.querySelector<HTMLDataListElement>('#year-jump-options')!;
     this.positionNode = root.querySelector<HTMLElement>('#timeline-position')!;
     this.ticksNode = root.querySelector<HTMLElement>('#timeline-ticks')!;
 
@@ -79,6 +91,19 @@ export class Timeline {
     });
     this.playButton.addEventListener('click', () => this.togglePlay());
 
+    this.yearNode.addEventListener('click', () => this.openJump());
+    this.jumpForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      this.commitJump();
+    });
+    this.jumpInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') this.closeJump();
+    });
+    this.jumpInput.addEventListener('blur', () => {
+      // Give a datalist click time to land as a submit first.
+      window.setTimeout(() => this.closeJump(), 150);
+    });
+
     // Arrow keys work anywhere on the page, not only when the slider has focus.
     window.addEventListener('keydown', (event) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
@@ -97,9 +122,66 @@ export class Timeline {
     this.render();
   }
 
+  /* ------------------------------------------------------------ year jump */
+
+  private openJump(): void {
+    this.stop();
+    this.yearNode.hidden = true;
+    this.jumpForm.hidden = false;
+    this.jumpInput.value = String(this.snapshots[this.index].year);
+    this.jumpInput.setAttribute('aria-invalid', 'false');
+    this.jumpInput.focus();
+    this.jumpInput.select();
+  }
+
+  private closeJump(): void {
+    if (this.jumpForm.hidden) return;
+    this.jumpForm.hidden = true;
+    this.yearNode.hidden = false;
+  }
+
+  private commitJump(): void {
+    const match = /^\s*(-?\d{1,6})\s*$/.exec(this.jumpInput.value);
+    if (!match) {
+      this.jumpInput.setAttribute('aria-invalid', 'true');
+      return;
+    }
+    const requested = Number(match[1]);
+
+    // Exact match jumps silently; anything else lands on the nearest snapshot
+    // and is reported. Ties go to the earlier year.
+    let best = 0;
+    for (let i = 1; i < this.snapshots.length; i += 1) {
+      if (
+        Math.abs(this.snapshots[i].year - requested) <
+        Math.abs(this.snapshots[best].year - requested)
+      ) {
+        best = i;
+      }
+    }
+    if (this.snapshots[best].year !== requested) {
+      this.callbacks.onNearestJump(requested, best);
+    }
+    this.closeJump();
+    this.setIndex(best);
+  }
+
   /** Re-applies every translated label. Called on start-up and on locale change. */
   private applyLabels(): void {
     this.slider.setAttribute('aria-label', strings.timelineLabel);
+    this.yearNode.title = strings.yearJumpTitle;
+    this.yearNode.setAttribute('aria-label', strings.yearJumpTitle);
+    this.jumpInput.placeholder = strings.yearJumpPlaceholder;
+
+    // Suggestions list every real snapshot year; picking one is always exact.
+    this.jumpOptions.innerHTML = '';
+    for (const snapshot of this.snapshots) {
+      const option = document.createElement('option');
+      option.value = String(snapshot.year);
+      option.label = formatYear(snapshot.year);
+      this.jumpOptions.append(option);
+    }
+
     this.previousButton.setAttribute('aria-label', strings.previousSnapshot);
     this.previousButton.title = strings.previousSnapshot;
     this.nextButton.setAttribute('aria-label', strings.nextSnapshot);
