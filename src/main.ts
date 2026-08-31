@@ -9,12 +9,15 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 
 setWorkerUrl(maplibreWorkerUrl);
 
+import { ChapterAxis } from './chapterAxis';
 import { loadManifest, loadSnapshot, prefetchSnapshot } from './data';
 import { assignEventsToSnapshots, type HistEvent } from './events';
 import { EVENTS } from './eventsData';
+import { resolveMilestones, type Period, type PeriodCategory } from './periods';
+import { PERIODS } from './periodsData';
 import { FACTS, factsForYear } from './facts';
 import { FactsCard } from './factsCard';
-import { formatCount, formatYear } from './format';
+import { formatCount, formatYear, formatYearShort } from './format';
 import { TerritoryMap } from './map';
 import { DetailPanel } from './panel';
 import {
@@ -135,6 +138,16 @@ class App {
   /** The layer defaults to on — the points are the reason the map is fun. */
   private eventsOpen = true;
 
+  private readonly chaptersNode = requireElement('#chapters');
+  private readonly chaptersStripNode = requireElement('#chapters-strip');
+  private readonly chapterNode = requireElement('#chapter');
+  private readonly timelineNode = requireElement('#timeline');
+  private readonly chapterAxis: ChapterAxis;
+  private activePeriod: Period | null = null;
+  private periodMilestones: HistEvent[] = [];
+  /** Milestones resolved once at start-up so broken references warn early. */
+  private readonly milestonesByPeriod = new Map<string, HistEvent[]>();
+
   private collection: SnapshotCollection | null = null;
   private currentIndex = 0;
   /** Set once the user touches the basemap toggle; suppresses the auto default. */
@@ -198,9 +211,17 @@ class App {
       },
     });
 
+    this.chapterAxis = new ChapterAxis(this.chapterNode, {
+      onMilestone: (index) => this.openMilestone(index),
+    });
+    for (const period of PERIODS) {
+      this.milestonesByPeriod.set(period.id, resolveMilestones(period, this.eventsById));
+    }
+
     this.bindChrome();
     this.applyViewButtonTitles();
     this.renderFooter();
+    this.renderChaptersStrip();
     this.languageLabelNode.textContent = strings.languageLabel;
 
     this.timeline.setIndex(initialIndex);
@@ -215,6 +236,11 @@ class App {
         );
       }
     });
+
+    // A deep-linked chapter takes over from the plain year once the app is up.
+    const periodParam = new URLSearchParams(window.location.search).get('period');
+    const linkedPeriod = PERIODS.find((period) => period.id === periodParam);
+    if (linkedPeriod) this.enterChapter(linkedPeriod);
   }
 
   /* ------------------------------------------------------------- chrome */
@@ -299,6 +325,14 @@ class App {
       this.publishEventMarks();
     }
 
+    requireElement('#chapter-exit').addEventListener('click', () => this.exitChapter());
+    requireElement<HTMLButtonElement>('#chapter-prestate').addEventListener('click', () => {
+      const index = Number(requireElement('#chapter-prestate').dataset.index);
+      if (!Number.isInteger(index)) return;
+      this.timeline.syncIndex(index);
+      void this.goTo(index);
+    });
+
     const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
     darkQuery.addEventListener('change', (event) => this.map.setDark(event.matches));
 
@@ -340,6 +374,9 @@ class App {
     this.refreshFacts();
     this.refreshEvents();
     this.publishEventMarks();
+    this.renderChaptersStrip();
+    this.renderChapterChrome();
+    this.chapterAxis.retranslate();
 
     const snapshot = this.snapshots[this.currentIndex];
     this.setBasemap(this.map.isBasemapVisible());
@@ -380,10 +417,30 @@ class App {
     );
   }
 
-  /** Updates the events toggle and pushes the current snapshot's points. */
+  /**
+   * Updates the events toggle and pushes the current points. In chapter mode
+   * the points are the chapter's milestones instead of the snapshot bucket —
+   * and only those at or before the shown snapshot's year, so no event ever
+   * sits on a map older than itself.
+   */
   private refreshEvents(): void {
     if (EVENTS.length === 0) return;
     const year = this.snapshots[this.currentIndex].year;
+
+    if (this.activePeriod) {
+      // Cut-off is the earlier of the shown snapshot and the current milestone:
+      // the snapshot bound keeps the anachronism rule (nothing newer than the
+      // map), the milestone bound makes stepping through a chapter reveal its
+      // story point by point instead of spoiling it all at once.
+      const milestoneYear =
+        this.periodMilestones[this.chapterAxis.currentIndex]?.year ?? Number.POSITIVE_INFINITY;
+      const cutoff = Math.min(year, milestoneYear);
+      const milestones = this.periodMilestones.filter((event) => event.year <= cutoff);
+      if (milestones.length === 0) this.map.clearEventsData();
+      else this.map.setEventsData(this.toFeatureCollection(milestones));
+      return;
+    }
+
     const events = this.eventsBySnapshot.get(year) ?? [];
     this.eventsToggle.textContent = `${strings.eventsToggle} (${events.length})`;
     this.eventsToggle.setAttribute('aria-pressed', this.eventsOpen ? 'true' : 'false');
@@ -392,7 +449,11 @@ class App {
       this.map.clearEventsData();
       return;
     }
-    this.map.setEventsData({
+    this.map.setEventsData(this.toFeatureCollection(events));
+  }
+
+  private toFeatureCollection(events: HistEvent[]): GeoJSON.FeatureCollection {
+    return {
       type: 'FeatureCollection',
       features: events.map((event) => ({
         type: 'Feature',
@@ -402,7 +463,165 @@ class App {
           label: `${formatYear(event.year)} — ${event.name[localeCode]}`,
         },
       })),
-    });
+    };
+  }
+
+  /* ----------------------------------------------------------- chapters */
+
+  /** Renders the chapter chips, grouped by category. */
+  private renderChaptersStrip(): void {
+    this.chaptersStripNode.innerHTML = '';
+    const categories: Array<{ key: PeriodCategory; label: string }> = [
+      { key: 'war', label: strings.chapterCategoryWar },
+      { key: 'discovery', label: strings.chapterCategoryDiscovery },
+      { key: 'revolution', label: strings.chapterCategoryRevolution },
+      { key: 'era', label: strings.chapterCategoryEra },
+    ];
+    for (const category of categories) {
+      const periods = PERIODS.filter((period) => period.category === category.key);
+      if (periods.length === 0) continue;
+
+      const group = document.createElement('div');
+      group.className = 'chapters__group';
+      const label = document.createElement('span');
+      label.className = 'chapters__cat';
+      label.textContent = category.label;
+      group.append(label);
+
+      for (const period of periods) {
+        const range = this.periodRange(period);
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chapters__chip';
+        chip.setAttribute('aria-label', strings.chapterOpenAria(period.name[localeCode], range));
+        const name = document.createElement('span');
+        name.textContent = period.name[localeCode];
+        const years = document.createElement('span');
+        years.className = 'chapters__chip-range';
+        years.textContent = range;
+        chip.append(name, years);
+        chip.addEventListener('click', () => this.enterChapter(period));
+        group.append(chip);
+      }
+      this.chaptersStripNode.append(group);
+    }
+  }
+
+  private periodRange(period: Period): string {
+    return `${formatYearShort(period.start)}–${formatYearShort(period.end)}`;
+  }
+
+  private enterChapter(period: Period): void {
+    const milestones = this.milestonesByPeriod.get(period.id) ?? [];
+    if (milestones.length === 0) {
+      console.warn(`chapter "${period.id}" has no usable milestones; not opening`);
+      return;
+    }
+    this.timeline.stop();
+    this.clearSelection();
+    this.activePeriod = period;
+    this.periodMilestones = milestones;
+
+    this.chaptersNode.hidden = true;
+    this.timelineNode.hidden = true;
+    this.chapterNode.hidden = false;
+
+    this.renderChapterChrome();
+    this.chapterAxis.setPeriod(period, milestones);
+    this.map.focusBounds(period.bounds);
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('period', period.id);
+    window.history.replaceState(null, '', url);
+
+    this.openMilestone(0);
+  }
+
+  private exitChapter(): void {
+    if (!this.activePeriod) return;
+    this.chapterAxis.clear();
+    this.activePeriod = null;
+    this.periodMilestones = [];
+
+    this.chapterNode.hidden = true;
+    this.chaptersNode.hidden = false;
+    this.timelineNode.hidden = false;
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('period');
+    window.history.replaceState(null, '', url);
+
+    this.map.closePopup();
+    this.refreshEvents();
+    this.map.resetWorldView();
+  }
+
+  /** Everything in the chapter header except the axis itself. */
+  private renderChapterChrome(): void {
+    const period = this.activePeriod;
+    if (!period) return;
+
+    requireElement('#chapter-title').textContent = period.name[localeCode];
+    requireElement('#chapter-range').textContent = this.periodRange(period);
+    requireElement('#chapter-desc').textContent = period.description[localeCode];
+
+    const note = requireElement('#chapter-note');
+    const hasSnapshotInRange = this.snapshots.some(
+      (snapshot) => snapshot.year >= period.start && snapshot.year <= period.end,
+    );
+    note.hidden = hasSnapshotInRange;
+    note.textContent = hasSnapshotInRange ? '' : strings.chapterNoSnapshotInRange;
+
+    const source = requireElement('#chapter-source');
+    source.innerHTML = '';
+    const link = document.createElement('a');
+    link.href = period.source.url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = period.source.label;
+    source.append(document.createTextNode(`${strings.factsSource}: `), link);
+
+    // The last snapshot before the chapter starts, if any: the "before" state.
+    const prestate = requireElement<HTMLButtonElement>('#chapter-prestate');
+    let beforeIndex = -1;
+    for (let i = 0; i < this.snapshots.length; i += 1) {
+      if (this.snapshots[i].year < period.start) beforeIndex = i;
+    }
+    prestate.hidden = beforeIndex === -1;
+    if (beforeIndex !== -1) {
+      prestate.textContent = strings.chapterPreState(formatYear(this.snapshots[beforeIndex].year));
+      prestate.dataset.index = String(beforeIndex);
+    }
+
+    this.updateChapterBadge();
+  }
+
+  /** The permanent "Borders: <year> snapshot" badge in the chapter header. */
+  private updateChapterBadge(): void {
+    if (!this.activePeriod) return;
+    requireElement('#chapter-badge').textContent = strings.chapterBordersFrom(
+      formatYear(this.snapshots[this.currentIndex].year),
+    );
+  }
+
+  /** Navigates to a milestone: nearest following snapshot, then its popup. */
+  private openMilestone(index: number): void {
+    const event = this.periodMilestones[index];
+    if (!event) return;
+    this.chapterAxis.syncIndex(index);
+
+    const snapshotIndex = this.snapshots.findIndex((snapshot) => snapshot.year >= event.year);
+    if (snapshotIndex === -1) return;
+
+    const showPopup = () => this.handleEventsClick([event.id], [event.lon, event.lat]);
+    if (snapshotIndex !== this.currentIndex) {
+      this.timeline.syncIndex(snapshotIndex);
+      void this.goTo(snapshotIndex).then(showPopup);
+    } else {
+      this.refreshEvents();
+      this.updateChapterBadge();
+      showPopup();
+    }
   }
 
   /** Popup listing every event under the tap, each with its year and source. */
@@ -534,6 +753,7 @@ class App {
     this.updateBasemapDefault(snapshot.year);
     this.refreshFacts();
     this.refreshEvents();
+    this.updateChapterBadge();
 
     const url = new URL(window.location.href);
     url.searchParams.set('year', String(snapshot.year));

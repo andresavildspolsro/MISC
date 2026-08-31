@@ -79,6 +79,20 @@ displayed as "not in dataset" rather than filled in.
   1650 snapshot, the first after it"). Names and descriptions are translated
   into all three languages; events later than the newest snapshot are dropped
   with a console warning rather than shown on a map that predates them.
+- **Chapters.** Curated bounded periods (`src/periodsData.ts`) — the Hundred
+  Years' War, the Age of Discovery, the Cold War — opened from a strip of
+  buttons under the map. A chapter frames the map on its theatre and swaps the
+  main ordinal slider for a **milestone axis**: linear in real time from the
+  chapter's first year to its last, with marks at the exact years of its
+  milestones (which are ordinary entries of the events layer, so they keep
+  their popups, sources and translations). Milestones reveal progressively as
+  you step through, never ahead of the story or of the shown map. Because most
+  chapters span few dataset snapshots — the Thirty Years' War contains none —
+  the chapter header carries a permanent "Borders: <year> snapshot" badge, an
+  explicit warning when no snapshot falls inside the range, and a "state
+  before the period" button that jumps to the last snapshot preceding it.
+  Deep-linkable as `?period=<id>`; milestone references are validated at
+  start-up and broken or out-of-range ones are dropped with a console warning.
 
 ## Licensing
 

@@ -87,6 +87,48 @@
         ></button>
       </section>
 
+      <section id="chapters" class="chapters">
+        <h2 class="chapters__heading" data-i18n="chaptersHeading"></h2>
+        <div id="chapters-strip" class="chapters__strip"></div>
+      </section>
+
+      <section id="chapter" class="chapter" hidden>
+        <div class="chapter__head">
+          <button id="chapter-exit" class="control chapter__exit" type="button" data-i18n="chapterExit"></button>
+          <h2 id="chapter-title" class="chapter__title"></h2>
+          <span id="chapter-range" class="chapter__range"></span>
+          <span id="chapter-badge" class="chapter__badge"></span>
+          <button id="chapter-prestate" class="control chapter__prestate" type="button" hidden></button>
+        </div>
+        <p id="chapter-desc" class="chapter__desc"></p>
+        <p id="chapter-note" class="chapter__note" hidden></p>
+
+        <div class="chapter__controls">
+          <button id="chapter-prev" class="control control--icon" type="button">‹</button>
+          <button id="chapter-play" class="control control--icon" type="button">▶</button>
+          <button id="chapter-next" class="control control--icon" type="button">›</button>
+
+          <div class="chapter__axis">
+            <div id="chapter-track" class="chapter__track">
+              <div id="chapter-fill" class="chapter__fill"></div>
+            </div>
+            <div class="chapter__ends">
+              <span id="chapter-start"></span>
+              <span id="chapter-end"></span>
+            </div>
+          </div>
+        </div>
+
+        <p class="chapter__readout">
+          <span id="chapter-milestone"></span>
+          <span id="chapter-milestone-position" class="chapter__position"></span>
+        </p>
+        <p class="chapter__help">
+          <span data-i18n="chapterAxisHelp"></span>
+          <span id="chapter-source"></span>
+        </p>
+      </section>
+
       <section id="timeline" class="timeline">
         <div class="timeline__readout">
           <span class="timeline__label" data-i18n="showingYear"></span>

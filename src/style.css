@@ -191,6 +191,9 @@ a:hover {
   position: relative;
   flex: 1 1 auto;
   min-height: 60vh;
+  /* The closed panel waits just off-stage (translateX(100%)); without
+     clipping it would widen the page and let the whole body pan sideways. */
+  overflow: hidden;
 }
 
 .map {
@@ -943,5 +946,243 @@ a:hover {
 
   .footer__column--wide {
     grid-column: span 1;
+  }
+}
+
+/* ------------------------------------------------------------- chapters */
+
+.chapters {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.chapters__heading {
+  flex-shrink: 0;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.chapters__strip {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.chapters__group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.chapters__group + .chapters__group {
+  margin-left: 0.75rem;
+}
+
+.chapters__cat {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.chapters__chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chapters__chip:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-sunken);
+}
+
+.chapters__chip-range {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------- chapter mode */
+
+.chapter {
+  flex-shrink: 0;
+  padding: 0.6rem 1rem 0.75rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.chapter__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.chapter__title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.chapter__range {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.chapter__badge {
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--warn-border);
+  border-radius: 999px;
+  background: var(--warn-surface);
+  color: var(--warn-text);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.chapter__exit {
+  order: 10;
+  margin-left: auto;
+}
+
+.chapter__prestate {
+  font-size: 0.75rem;
+}
+
+.chapter__desc {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  max-width: 70rem;
+}
+
+.chapter__note {
+  margin: 0.3rem 0 0;
+  padding: 0.3rem 0.55rem;
+  border-left: 3px solid var(--warn-border);
+  background: var(--warn-surface);
+  color: var(--warn-text);
+  font-size: 0.78rem;
+}
+
+.chapter__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+}
+
+.chapter__axis {
+  flex: 1;
+  min-width: 0;
+}
+
+.chapter__track {
+  position: relative;
+  height: 6px;
+  margin: 0.55rem 0 0.2rem;
+  border-radius: 3px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+}
+
+.chapter__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--event-dot) 35%, transparent);
+  pointer-events: none;
+  transition: width 0.25s ease;
+}
+
+.chmark {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  border: 2px solid var(--surface-raised);
+  border-radius: 50%;
+  background: var(--event-dot);
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+}
+
+.chmark:hover {
+  width: 17px;
+  height: 17px;
+}
+
+.chmark--past {
+  opacity: 0.55;
+}
+
+.chmark--active {
+  width: 19px;
+  height: 19px;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--event-dot) 30%, transparent);
+}
+
+.chapter__ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.chapter__readout {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.chapter__position {
+  margin-left: 0.6rem;
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.chapter__help {
+  margin: 0.35rem 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.chapter__help a {
+  color: inherit;
+}
+
+@media (max-width: 640px) {
+  .chapters {
+    padding: 0.45rem 0.75rem;
+  }
+
+  .chapter {
+    padding: 0.5rem 0.75rem 0.65rem;
+  }
+
+  .chapter__exit {
+    order: 0;
+    margin-left: 0;
   }
 }

@@ -121,6 +121,25 @@ export const cs: Strings = {
     `Událost roku ${eventYear} — hranice jsou ze snímku ${snapshotYear}, prvního po ní.`,
   eventMarkerTitle: (year, names) => `${year}: ${names}`,
 
+  chaptersHeading: 'Kapitoly',
+  chapterCategoryWar: 'Války',
+  chapterCategoryDiscovery: 'Objevy a expanze',
+  chapterCategoryRevolution: 'Revoluce a převraty',
+  chapterCategoryEra: 'Éry',
+  chapterExit: 'Zpět na celou osu',
+  chapterBordersFrom: (snapshotYear) => `Hranice: snímek ${snapshotYear}`,
+  chapterNoSnapshotInRange:
+    'V rozsahu této kapitoly nemá datová sada žádný snímek hranic; mapa proto ukazuje nejbližší snímek a říká který.',
+  chapterAxisHelp:
+    'Osa kapitoly běží lineárně v čase; značky jsou milníky s přesnými letopočty. Hranice na mapě vždy pocházejí z uvedeného snímku datové sady, nikdy se nedopočítávají.',
+  chapterPreState: (snapshotYear) => `Stav před obdobím (snímek ${snapshotYear})`,
+  chapterMilestonePosition: (current, total) => `Milník ${current} z ${total}`,
+  previousMilestone: 'Předchozí milník',
+  nextMilestone: 'Další milník',
+  playChapter: 'Přehrát milníky',
+  pauseChapter: 'Zastavit přehrávání',
+  chapterOpenAria: (name, range) => `Otevřít kapitolu ${name} (${range})`,
+
   disclaimerTitle: 'Hranice před rokem 1648 jsou přibližné',
   disclaimerBody:
     'Autoři datové sady upozorňují, že v Evropě dává pojem pevné státní hranice smysl až po vestfálském míru (1648). Dřívější útvary měly překrývající se, pozvolné a často nevymezené hranice. Každou čáru na této mapě berte jako odborný odhad, nikoli jako zaměřenou hranici.',

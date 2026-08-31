@@ -121,6 +121,25 @@ export const en: Strings = {
     `Event of ${eventYear} — borders shown from the ${snapshotYear} snapshot, the first one after it.`,
   eventMarkerTitle: (year, names) => `${year}: ${names}`,
 
+  chaptersHeading: 'Chapters',
+  chapterCategoryWar: 'Wars',
+  chapterCategoryDiscovery: 'Discovery and expansion',
+  chapterCategoryRevolution: 'Revolutions and upheavals',
+  chapterCategoryEra: 'Eras',
+  chapterExit: 'Back to the full timeline',
+  chapterBordersFrom: (snapshotYear) => `Borders: ${snapshotYear} snapshot`,
+  chapterNoSnapshotInRange:
+    'The dataset has no border snapshot inside this chapter’s range; the map therefore shows the nearest snapshot and says which one.',
+  chapterAxisHelp:
+    'The chapter axis runs linearly in time; the marks are milestones with exact years. Borders on the map always come from the named dataset snapshot — they are never computed.',
+  chapterPreState: (snapshotYear) => `State before the period (${snapshotYear} snapshot)`,
+  chapterMilestonePosition: (current, total) => `Milestone ${current} of ${total}`,
+  previousMilestone: 'Previous milestone',
+  nextMilestone: 'Next milestone',
+  playChapter: 'Play milestones',
+  pauseChapter: 'Pause playback',
+  chapterOpenAria: (name, range) => `Open chapter ${name} (${range})`,
+
   disclaimerTitle: 'Borders before 1648 are approximations',
   disclaimerBody:
     'The dataset authors note that in Europe the concept of a fixed national boundary only becomes meaningful after the Peace of Westphalia (1648). Earlier polities had overlapping, gradual and often undefined frontiers. Treat every line on this map as a scholarly approximation, not a surveyed border.',

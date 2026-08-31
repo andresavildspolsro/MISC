@@ -119,6 +119,28 @@ export interface Strings {
   eventYearShown: (eventYear: string, snapshotYear: string) => string;
   eventMarkerTitle: (year: string, names: string) => string;
 
+  /** Chapters: curated bounded periods with their own milestone axis. */
+  chaptersHeading: string;
+  chapterCategoryWar: string;
+  chapterCategoryDiscovery: string;
+  chapterCategoryRevolution: string;
+  chapterCategoryEra: string;
+  chapterExit: string;
+  /** Permanent badge in chapter mode: which snapshot the borders come from. */
+  chapterBordersFrom: (snapshotYear: string) => string;
+  /** Shown when no snapshot falls inside the chapter's year range. */
+  chapterNoSnapshotInRange: string;
+  /** Axis help: linear time, milestone marks, borders always from a snapshot. */
+  chapterAxisHelp: string;
+  /** Button jumping to the last snapshot before the chapter starts. */
+  chapterPreState: (snapshotYear: string) => string;
+  chapterMilestonePosition: (current: string, total: string) => string;
+  previousMilestone: string;
+  nextMilestone: string;
+  playChapter: string;
+  pauseChapter: string;
+  chapterOpenAria: (name: string, range: string) => string;
+
   disclaimerTitle: string;
   disclaimerBody: string;
   disclaimerDismiss: string;

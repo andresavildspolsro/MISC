@@ -371,6 +371,15 @@ export class Timeline {
     return this.index;
   }
 
+  /**
+   * Moves the slider without firing onChange — used while a chapter drives
+   * navigation itself, so the hidden main timeline stays in step.
+   */
+  syncIndex(next: number): void {
+    this.index = Math.min(this.snapshots.length - 1, Math.max(0, next));
+    this.render();
+  }
+
   /* ------------------------------------------------------------- playback */
 
   private togglePlay(): void {

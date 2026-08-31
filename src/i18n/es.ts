@@ -122,6 +122,25 @@ export const es: Strings = {
     `Acontecimiento de ${eventYear}: las fronteras proceden de la instantánea de ${snapshotYear}, la primera posterior.`,
   eventMarkerTitle: (year, names) => `${year}: ${names}`,
 
+  chaptersHeading: 'Capítulos',
+  chapterCategoryWar: 'Guerras',
+  chapterCategoryDiscovery: 'Descubrimientos y expansión',
+  chapterCategoryRevolution: 'Revoluciones y convulsiones',
+  chapterCategoryEra: 'Eras',
+  chapterExit: 'Volver a la línea completa',
+  chapterBordersFrom: (snapshotYear) => `Fronteras: instantánea de ${snapshotYear}`,
+  chapterNoSnapshotInRange:
+    'El conjunto de datos no tiene ninguna instantánea de fronteras dentro del rango de este capítulo; el mapa muestra por tanto la más cercana e indica cuál es.',
+  chapterAxisHelp:
+    'El eje del capítulo es lineal en el tiempo; las marcas son hitos con años exactos. Las fronteras del mapa provienen siempre de la instantánea indicada — nunca se calculan.',
+  chapterPreState: (snapshotYear) => `Estado antes del período (instantánea de ${snapshotYear})`,
+  chapterMilestonePosition: (current, total) => `Hito ${current} de ${total}`,
+  previousMilestone: 'Hito anterior',
+  nextMilestone: 'Hito siguiente',
+  playChapter: 'Reproducir hitos',
+  pauseChapter: 'Pausar reproducción',
+  chapterOpenAria: (name, range) => `Abrir el capítulo ${name} (${range})`,
+
   disclaimerTitle: 'Las fronteras anteriores a 1648 son aproximaciones',
   disclaimerBody:
     'Los autores del conjunto de datos señalan que en Europa el concepto de frontera nacional fija solo cobra sentido después de la Paz de Westfalia (1648). Las entidades políticas anteriores tenían fronteras superpuestas, graduales y a menudo indefinidas. Considera cada línea de este mapa una aproximación académica, no una frontera medida.',

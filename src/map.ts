@@ -709,6 +709,11 @@ export class TerritoryMap {
     this.map.fitBounds(WORLD_BOUNDS, { padding: 12, duration: 600 });
   }
 
+  /** Frames a chapter's bounding box. */
+  focusBounds(bounds: [[number, number], [number, number]]): void {
+    this.map.fitBounds(bounds, { padding: 40, duration: 800 });
+  }
+
   resize(): void {
     this.map.resize();
   }
