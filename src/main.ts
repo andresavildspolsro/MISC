@@ -130,6 +130,12 @@ class App {
         onSelect: (index) => this.handleSelect(index),
         onHover: (index) => this.handleHover(index),
       },
+      {
+        coarseLand: manifest.basemap.files.ne_110m_land.path,
+        coarseLakes: manifest.basemap.files.ne_110m_lakes.path,
+        detailLand: manifest.basemap.files.ne_50m_land.path,
+        detailLakes: manifest.basemap.files.ne_50m_lakes.path,
+      },
     );
 
     this.panel = new DetailPanel(requireElement('#panel'), () => this.clearSelection());

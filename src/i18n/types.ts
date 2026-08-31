@@ -96,6 +96,8 @@ export interface Strings {
   footerSnapshotCommit: (commit: string) => string;
   footerBasemapHeading: string;
   footerBasemapAttribution: string;
+  /** Terse form for the on-map attribution control, which has little room. */
+  basemapAttributionShort: string;
   footerRendererHeading: string;
   footerRenderer: string;
   footerMethodHeading: string;

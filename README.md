@@ -35,9 +35,11 @@ displayed as "not in dataset" rather than filled in.
   neighbours on a light one.
 - **World by default**, with a one-click Europe view — Europe is where the
   dataset is by far the most finely subdivided.
-- **Basemap toggle.** The modern basemap is label-free, desaturated, and starts
-  hidden before AD 1000, because modern coastlines and rivers under ancient
-  borders mislead.
+- **Self-hosted basemap.** Coastlines and lakes come from Natural Earth,
+  vendored at build time and served from this site — no tile provider and no
+  API key that can stop working. Label-free by construction, and still
+  toggleable; it starts hidden before AD 1000, because modern coastlines and
+  rivers under ancient borders mislead.
 - **Pre-1648 banner** noting that fixed national boundaries are anachronistic in
   Europe before the Peace of Westphalia.
 - **Three languages** — English, Czech and Spanish — switchable from the top bar
@@ -61,7 +63,7 @@ Attribution appears in the site footer:
 | Component | Attribution |
 |---|---|
 | Border data | Historical Basemaps, André Ourednik and contributors, GPL-3.0 |
-| Basemap tiles | © OpenStreetMap contributors © CARTO |
+| Coastlines | Natural Earth v5.1.2, public domain |
 | Renderer | MapLibre GL JS, BSD-3-Clause |
 
 ## Getting started
@@ -91,7 +93,10 @@ npm run preview
    warning; there is no fallback that would guess a year.
 5. Validates that each file is a GeoJSON `FeatureCollection` and that no two
    snapshots claim the same year.
-6. Writes `public/data/manifest.json` — the list of years, filenames, feature
+6. Downloads the Natural Earth coastline and lake files (110m and 50m) at a
+   pinned tag into `public/data/basemap/`. 110m loads with the page (170 kB);
+   50m (2.4 MB) is fetched only once the viewer zooms past the world view.
+7. Writes `public/data/manifest.json` — the list of years, filenames, feature
    counts, byte sizes and the property keys each file actually carries. The app
    reads only this manifest; it never fetches from GitHub at runtime.
 

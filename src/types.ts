@@ -12,7 +12,21 @@ export interface ManifestSnapshot {
   borderPrecisions: Array<number | string>;
 }
 
+export interface BasemapFile {
+  path: string;
+  bytes: number;
+  featureCount: number;
+}
+
+export interface BasemapManifest {
+  source: string;
+  ref: string;
+  license: string;
+  files: Record<string, BasemapFile>;
+}
+
 export interface Manifest {
+  basemap: BasemapManifest;
   generatedFrom: {
     repository: string;
     commit: string;

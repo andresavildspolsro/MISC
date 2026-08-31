@@ -25,7 +25,12 @@ const HOVER_HALO_LAYER = 'territory-hover-halo';
 const HOVER_GLOW_LAYER = 'territory-hover-glow';
 const HOVER_LAYER = 'territory-hover';
 const SELECTED_LAYER = 'territory-selected';
-const BASEMAP_LAYER = 'basemap';
+const LAND_LAYER = 'basemap-land';
+const LAKES_LAYER = 'basemap-lakes';
+const COAST_LAYER = 'basemap-coast';
+const LAND_SOURCE = 'basemap-land-source';
+const LAKES_SOURCE = 'basemap-lakes-source';
+const BASEMAP_LAYERS = [LAND_LAYER, LAKES_LAYER, COAST_LAYER];
 const BACKGROUND_LAYER = 'background';
 
 /**
@@ -45,16 +50,25 @@ export const EUROPE_BOUNDS: LngLatBoundsLike = [
 ];
 
 /**
- * A neutral, label-free raster basemap. Labels are deliberately avoided: modern
- * place names printed under ancient borders are exactly the kind of anachronism
- * the dataset authors warn about.
+ * Zoom at which the coarse 110m coastline is swapped for the 50m one. Chosen so
+ * the world view stays on the small file and the Europe view crosses over —
+ * 110m is visibly chunky at continental scale.
  */
-const BASEMAP_TILES = [
-  'https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-  'https://b.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-  'https://c.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-  'https://d.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-];
+const DETAIL_ZOOM = 2;
+
+/**
+ * The basemap is drawn from Natural Earth coastlines vendored into this site,
+ * not from a tile provider. That removes the API key a provider can start
+ * demanding, keeps the site free of third-party runtime calls, and keeps the
+ * base label-free by construction — modern place names printed under ancient
+ * borders are exactly the anachronism the dataset authors warn about.
+ */
+export interface BasemapSources {
+  coarseLand: string;
+  coarseLakes: string;
+  detailLand: string;
+  detailLakes: string;
+}
 
 const EMPTY: SnapshotCollection = { type: 'FeatureCollection', features: [] };
 
@@ -88,10 +102,19 @@ export class TerritoryMap {
   private selectedId: number | null = null;
   private dark = false;
   private basemapVisible = true;
+  private readonly basemap: BasemapSources;
+  /** Set once the finer coastline has been requested, so it is fetched once. */
+  private detailRequested = false;
 
-  constructor(container: HTMLElement, tooltip: HTMLElement, callbacks: MapCallbacks) {
+  constructor(
+    container: HTMLElement,
+    tooltip: HTMLElement,
+    callbacks: MapCallbacks,
+    basemap: BasemapSources,
+  ) {
     this.tooltip = tooltip;
     this.callbacks = callbacks;
+    this.basemap = basemap;
     this.dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     this.map = new MapLibreMap({
@@ -122,7 +145,7 @@ export class TerritoryMap {
     this.map.addControl(
       new AttributionControl({
         compact: true,
-        customAttribution: strings.footerBasemapAttribution,
+        customAttribution: strings.basemapAttributionShort,
       }),
       'bottom-right',
     );
@@ -132,10 +155,18 @@ export class TerritoryMap {
     // the borders — the actual subject of this map — from ever being drawn.
     this.map.on('style.load', () => {
       this.ready = true;
+      void this.loadBasemap(this.basemap.coarseLand, this.basemap.coarseLakes);
       if (this.pendingData) {
         this.setData(this.pendingData);
         this.pendingData = null;
       }
+    });
+
+    // The finer coastline is worth its 2.4 MB only once someone zooms in.
+    this.map.on('zoomend', () => {
+      if (this.detailRequested || this.map.getZoom() < DETAIL_ZOOM) return;
+      this.detailRequested = true;
+      void this.loadBasemap(this.basemap.detailLand, this.basemap.detailLakes);
     });
 
     this.bindInteractions();
@@ -156,13 +187,12 @@ export class TerritoryMap {
       // No glyphs or sprite are declared: this map draws no text, so it needs
       // neither, and avoids depending on a third-party font server.
       sources: {
-        basemap: {
-          type: 'raster',
-          tiles: BASEMAP_TILES,
-          tileSize: 256,
-          maxzoom: 19,
-          attribution: strings.footerBasemapAttribution,
+        [LAND_SOURCE]: {
+          type: 'geojson',
+          data: EMPTY,
+          attribution: strings.basemapAttributionShort,
         },
+        [LAKES_SOURCE]: { type: 'geojson', data: EMPTY },
         [SOURCE_ID]: {
           type: 'geojson',
           data: EMPTY,
@@ -174,18 +204,27 @@ export class TerritoryMap {
         {
           id: BACKGROUND_LAYER,
           type: 'background',
-          paint: { 'background-color': this.dark ? '#20201c' : '#f2f1ec' },
+          paint: { 'background-color': this.backgroundColor() },
         },
         {
-          id: BASEMAP_LAYER,
-          type: 'raster',
-          source: 'basemap',
+          id: LAND_LAYER,
+          type: 'fill',
+          source: LAND_SOURCE,
+          paint: { 'fill-color': this.dark ? '#26261f' : '#efede7' },
+        },
+        {
+          id: LAKES_LAYER,
+          type: 'fill',
+          source: LAKES_SOURCE,
+          paint: { 'fill-color': this.waterColor() },
+        },
+        {
+          id: COAST_LAYER,
+          type: 'line',
+          source: LAND_SOURCE,
           paint: {
-            'raster-opacity': 1,
-            // Ancient borders over a modern basemap read better when the base
-            // is desaturated and does not compete with the fills.
-            'raster-saturation': -0.6,
-            'raster-contrast': -0.1,
+            'line-color': this.dark ? '#43423b' : '#c2bfb6',
+            'line-width': 0.8,
           },
         },
         {
@@ -280,6 +319,20 @@ export class TerritoryMap {
         },
       ],
     };
+  }
+
+  private waterColor(): string {
+    return this.dark ? '#0f1418' : '#d9e3ea';
+  }
+
+  /**
+   * With the basemap on, the background *is* the ocean. With it off there is no
+   * land to contrast against, so it falls back to a neutral surface rather than
+   * pretending the whole world is sea.
+   */
+  private backgroundColor(): string {
+    if (!this.basemapVisible) return this.dark ? '#20201c' : '#f2f1ec';
+    return this.waterColor();
   }
 
   /** `match` on the baked slot so the palette can swap without reloading data. */
@@ -400,6 +453,31 @@ export class TerritoryMap {
     this.callbacks.onHover(id);
   }
 
+  /**
+   * Fetches a coastline pair and pushes it into the basemap sources.
+   *
+   * Failures are swallowed on purpose: the basemap is context, not content. If
+   * it cannot be fetched the borders — which are the point of this map — still
+   * draw on a plain background, exactly as they do when the user turns the
+   * basemap off.
+   */
+  private async loadBasemap(landPath: string, lakesPath: string): Promise<void> {
+    const base = import.meta.env.BASE_URL;
+    const fetchJson = async (p: string) => {
+      const response = await fetch(`${base}${p}`);
+      if (!response.ok) throw new Error(`${p}: HTTP ${response.status}`);
+      return (await response.json()) as GeoJSON.FeatureCollection;
+    };
+
+    try {
+      const [land, lakes] = await Promise.all([fetchJson(landPath), fetchJson(lakesPath)]);
+      (this.map.getSource(LAND_SOURCE) as GeoJSONSource | undefined)?.setData(land);
+      (this.map.getSource(LAKES_SOURCE) as GeoJSONSource | undefined)?.setData(lakes);
+    } catch (error) {
+      console.warn('basemap unavailable, drawing borders without it', error);
+    }
+  }
+
   private setHoverFilter(id: number): void {
     for (const layer of [HOVER_HALO_LAYER, HOVER_GLOW_LAYER, HOVER_LAYER]) {
       this.map.setFilter(layer, ['==', ['id'], id]);
@@ -445,7 +523,10 @@ export class TerritoryMap {
       this.map.once('style.load', () => this.setBasemapVisible(visible));
       return;
     }
-    this.map.setLayoutProperty(BASEMAP_LAYER, 'visibility', visible ? 'visible' : 'none');
+    for (const layer of BASEMAP_LAYERS) {
+      this.map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
+    }
+    this.map.setPaintProperty(BACKGROUND_LAYER, 'background-color', this.backgroundColor());
   }
 
   isBasemapVisible(): boolean {
@@ -457,7 +538,10 @@ export class TerritoryMap {
     this.dark = dark;
     if (!this.ready) return;
 
-    this.map.setPaintProperty(BACKGROUND_LAYER, 'background-color', dark ? '#20201c' : '#f2f1ec');
+    this.map.setPaintProperty(BACKGROUND_LAYER, 'background-color', this.backgroundColor());
+    this.map.setPaintProperty(LAND_LAYER, 'fill-color', dark ? '#26261f' : '#efede7');
+    this.map.setPaintProperty(LAKES_LAYER, 'fill-color', this.waterColor());
+    this.map.setPaintProperty(COAST_LAYER, 'line-color', dark ? '#43423b' : '#c2bfb6');
     this.map.setPaintProperty(FILL_LAYER, 'fill-color', this.fillColorExpression());
     for (const layer of [OUTLINE_PRECISE, OUTLINE_FUZZY, HOVER_GLOW_LAYER]) {
       this.map.setPaintProperty(layer, 'line-color', this.outlineColorExpression());

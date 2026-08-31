@@ -42,8 +42,26 @@ export const UPSTREAM = {
   license: 'GPL-3.0-or-later',
 };
 
+/**
+ * Coastlines for the basemap. Natural Earth is public domain, so it can be
+ * vendored and served from this site — no tile provider, no API key, nothing
+ * that can start demanding one later.
+ *
+ * Two resolutions ship: 110m is tiny and loads with the page, 50m is fetched
+ * only once the user zooms in far enough to need it.
+ */
+export const BASEMAP = {
+  owner: 'nvkelso',
+  repo: 'natural-earth-vector',
+  /** Pinned release tag, for the same reason the border data is pinned. */
+  ref: 'v5.1.2',
+  license: 'Public domain (Natural Earth)',
+  files: ['ne_110m_land', 'ne_110m_lakes', 'ne_50m_land', 'ne_50m_lakes'],
+};
+
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const OUT_DIR = path.join(ROOT, 'public', 'data');
+const BASEMAP_DIR = path.join(OUT_DIR, 'basemap');
 const CACHE_DIR = path.join(ROOT, 'node_modules', '.cache', 'historical-basemaps');
 
 /** Default mapshaper tolerance. Conservative: visually lossless at world scale. */
@@ -146,6 +164,52 @@ function simplify(inputFile, outputFile, tolerance) {
   );
 }
 
+/* --------------------------------------------------------------- basemap */
+
+async function downloadBasemap() {
+  await fs.mkdir(BASEMAP_DIR, { recursive: true });
+  const written = {};
+
+  for (const name of BASEMAP.files) {
+    const url =
+      `https://raw.githubusercontent.com/${BASEMAP.owner}/${BASEMAP.repo}/` +
+      `${BASEMAP.ref}/geojson/${name}.geojson`;
+
+    const response = await fetch(url, {
+      headers: { 'user-agent': 'historical-world-map build script' },
+    });
+    if (!response.ok) {
+      fail(`basemap download failed for ${name}: HTTP ${response.status}`);
+    }
+    const body = await response.text();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(body);
+    } catch (error) {
+      return fail(`${name}.geojson is not valid JSON: ${error.message}`);
+    }
+    if (parsed?.type !== 'FeatureCollection') {
+      return fail(`${name}.geojson is not a GeoJSON FeatureCollection`);
+    }
+
+    await fs.writeFile(path.join(BASEMAP_DIR, `${name}.geojson`), body);
+    written[name] = {
+      path: `data/basemap/${name}.geojson`,
+      bytes: Buffer.byteLength(body),
+      featureCount: parsed.features?.length ?? 0,
+    };
+    log(`basemap ${name}: ${(Buffer.byteLength(body) / 1024).toFixed(0)} kB`);
+  }
+
+  return {
+    source: `https://github.com/${BASEMAP.owner}/${BASEMAP.repo}`,
+    ref: BASEMAP.ref,
+    license: BASEMAP.license,
+    files: written,
+  };
+}
+
 /* ------------------------------------------------------------------- main */
 
 async function main() {
@@ -245,7 +309,10 @@ async function main() {
     .filter((year, index, all) => all.indexOf(year) !== index);
   if (duplicates.length) fail(`duplicate snapshot years: ${duplicates.join(', ')}`);
 
+  const basemap = await downloadBasemap();
+
   const manifest = {
+    basemap,
     generatedFrom: {
       repository: `https://github.com/${UPSTREAM.owner}/${UPSTREAM.repo}`,
       commit: UPSTREAM.commit,
