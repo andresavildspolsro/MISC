@@ -53,13 +53,17 @@ displayed as "not in dataset" rather than filled in.
 - **Deep links.** `?year=1650&lang=cs` opens that snapshot in that language. A
   year that is not in the dataset is reported as missing, never rounded to a
   neighbour — unlike the interactive jump, a shared link claims a specific year.
-- **Interesting facts (dormant).** `src/facts.ts` holds a curated, reviewed
-  list of historical asides shown behind an explicit toggle, in their own card
-  with a permanent "added context — not part of the dataset" label. Each entry
-  is expected to cite an external source; entries without one render with an
-  "unverified" warning. The toggle does not exist in the UI until the list has
-  entries. LLM-drafted text counts as unsourced until a checkable reference
-  backs it.
+- **Interesting facts.** A curated list of 100 historical asides
+  (`src/factsData.ts`) shown behind an explicit toggle, in their own card with
+  a permanent "added context — not part of the dataset" label and a source
+  link on every entry. Provenance: drafted with Gemini, then reviewed by hand —
+  eight factual errors were corrected (wrong dates for the Meroe pyramids, the
+  Galápagos and others; see the commit history) and legend-shaped claims are
+  phrased as legends. Each fact appears on the first snapshot at or after its
+  anchor date, never earlier, so nothing shows on a map that predates it; the
+  real date is stated in the text. An entry without a source renders with an
+  "unverified" warning; entries referencing years with no snapshot are called
+  out on the console at start-up.
 
 ## Licensing
 

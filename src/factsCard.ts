@@ -51,14 +51,16 @@ export class FactsCard {
 
     const { text, translated } = factText(fact, localeCode);
 
+    if (fact.territory) {
+      const place = document.createElement('p');
+      place.className = 'facts__place';
+      place.textContent = fact.territory;
+      item.append(place);
+    }
+
     const body = document.createElement('p');
     body.className = 'facts__text';
-    if (fact.territory) {
-      const territory = document.createElement('strong');
-      territory.textContent = `${fact.territory}: `;
-      body.append(territory);
-    }
-    body.append(document.createTextNode(text));
+    body.textContent = text;
     item.append(body);
 
     if (!translated) {

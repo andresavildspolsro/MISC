@@ -45,8 +45,9 @@ export interface Fact {
   source?: FactSource;
 }
 
-/** Empty until the curated list lands — the toggle stays hidden while so. */
-export const FACTS: Fact[] = [];
+import { FACTS } from './factsData';
+
+export { FACTS };
 
 export function factsForYear(year: number): Fact[] {
   return FACTS.filter((fact) => fact.years.includes(year));

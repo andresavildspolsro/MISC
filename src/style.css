@@ -533,6 +533,12 @@ a:hover {
   border-top: 1px solid var(--border);
 }
 
+.facts__place {
+  margin: 0 0 0.1rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
 .facts__text {
   margin: 0 0 0.2rem;
   font-size: 0.82rem;
