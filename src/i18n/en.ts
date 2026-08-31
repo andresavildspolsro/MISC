@@ -7,6 +7,13 @@ export const en: Strings = {
 
   languageLabel: 'Language',
 
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  toggleAttribution: 'Toggle attribution',
+  mapAriaLabel: 'Map of historical borders',
+  panelAriaLabel: 'Territory details',
+  factsAriaLabel: 'Interesting facts',
+
   appTitle: 'Historical borders of the world',
   appTagline: 'Political and cultural boundaries, snapshot by snapshot',
 
@@ -125,7 +132,6 @@ export const en: Strings = {
   footerLicenseName: 'GNU General Public License v3.0',
   footerSnapshotCommit: (commit) => `Dataset snapshot: commit ${commit}`,
   footerBasemapHeading: 'Basemap',
-  basemapAttributionShort: 'Coastlines: Natural Earth',
   footerBasemapAttribution: 'Coastlines: Natural Earth (public domain), served from this site — no tile provider, no API key',
   footerRendererHeading: 'Rendering',
   footerRenderer: 'Rendered with MapLibre GL JS, licensed BSD-3-Clause.',
@@ -136,5 +142,5 @@ export const en: Strings = {
     `Geometry simplified at build time (mapshaper, ${tolerance}) for load speed.`,
   footerUnsimplified: 'Geometry is served exactly as published upstream, unsimplified.',
   footerLanguageNote:
-    'Only the interface is translated. Territory names and every other dataset value are shown exactly as the dataset records them, in its own language.',
+    'The interface is translated; in Czech and Spanish, well-known territory names also get a hand-curated translation in titles and tooltips. The dataset record itself — NAME, SUBJECTO and the other rows — is always shown verbatim, exactly as the dataset stores it.',
 };

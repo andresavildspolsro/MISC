@@ -236,12 +236,15 @@ between them with no page reload; the choice is remembered in `localStorage`
 and mirrored into `?lang=`. On first visit the language comes from `?lang=`,
 then a previous choice, then the browser's `Accept-Language`, then English.
 
-**Only the interface is translated.** Territory names, `SUBJECTO`, `PARTOF` and
-every other dataset value are always rendered exactly as the dataset stores
-them — translating them would mean displaying something the source does not
-say. The footer states this on the page. (The dataset also contains occasional
-typos, e.g. `Scottalnd` in the 1650 file; these are shown verbatim too, for the
-same reason.)
+**The dataset record is never rewritten.** The NAME/SUBJECTO/PARTOF rows in
+the panel always show exactly what the file contains — typos like `Scottalnd`
+included. On top of that, `src/nameGlosses.ts` carries a hand-curated
+translation table (~330 well-known entities, Czech and Spanish) used only for
+the tooltip, the panel title and the Wikipedia search term; a glossed title
+shows the original on hover, and a name not in the table renders as-is — a
+missing translation beats a guessed one. MapLibre's own control tooltips
+(zoom, attribution) and all `aria-label`s are localized too, and follow a
+language switch live.
 
 To add a language:
 

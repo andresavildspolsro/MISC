@@ -60,6 +60,12 @@ function applyStaticStrings(): void {
     const value = strings[key];
     if (typeof value === 'string') node.textContent = value;
   }
+  for (const node of document.querySelectorAll<HTMLElement>('[data-i18n-aria]')) {
+    const key = node.dataset.i18nAria as keyof typeof strings | undefined;
+    if (!key) continue;
+    const value = strings[key];
+    if (typeof value === 'string') node.setAttribute('aria-label', value);
+  }
 }
 
 function requireElement<T extends HTMLElement>(selector: string): T {
@@ -292,6 +298,7 @@ class App {
     this.renderFooter();
     this.timeline.retranslate();
     this.panel.retranslate();
+    this.map.retranslate();
     this.refreshFacts();
 
     const snapshot = this.snapshots[this.currentIndex];

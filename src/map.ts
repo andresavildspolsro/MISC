@@ -14,7 +14,8 @@ import {
 
 import { PRECISION_KEY, SLOT_KEY } from './data';
 import { palette, ungroupedColor, UNGROUPED_SLOT } from './colors';
-import { strings } from './strings';
+import { glossName } from './nameGlosses';
+import { localeCode, strings } from './strings';
 import type { SnapshotCollection } from './types';
 
 const SOURCE_ID = 'snapshot';
@@ -71,6 +72,13 @@ export interface BasemapSources {
 }
 
 const EMPTY: SnapshotCollection = { type: 'FeatureCollection', features: [] };
+
+/**
+ * On-map credit for the coastlines. A proper noun, deliberately not localized:
+ * the attribution control is built once and would otherwise go stale when the
+ * language changes. The full localized sentence lives in the footer.
+ */
+const BASEMAP_CREDIT = 'Natural Earth';
 
 export interface MapCallbacks {
   /**
@@ -138,6 +146,13 @@ export class TerritoryMap {
       // rotation would only make the borders harder to compare.
       pitchWithRotate: false,
       attributionControl: false,
+      // MapLibre's own control tooltips would otherwise stay English.
+      locale: {
+        'Map.Title': strings.mapAriaLabel,
+        'NavigationControl.ZoomIn': strings.zoomIn,
+        'NavigationControl.ZoomOut': strings.zoomOut,
+        'AttributionControl.ToggleAttribution': strings.toggleAttribution,
+      },
     });
 
     this.map.touchZoomRotate.disableRotation();
@@ -145,7 +160,7 @@ export class TerritoryMap {
     this.map.addControl(
       new AttributionControl({
         compact: true,
-        customAttribution: strings.basemapAttributionShort,
+        customAttribution: BASEMAP_CREDIT,
       }),
       'bottom-right',
     );
@@ -192,7 +207,7 @@ export class TerritoryMap {
         [LAND_SOURCE]: {
           type: 'geojson',
           data: EMPTY,
-          attribution: strings.basemapAttributionShort,
+          attribution: BASEMAP_CREDIT,
         },
         [LAKES_SOURCE]: { type: 'geojson', data: EMPTY },
         [SOURCE_ID]: {
@@ -429,9 +444,11 @@ export class TerritoryMap {
 
   private showTooltip(point: Point, feature: MapGeoJSONFeature): void {
     const name = feature.properties?.NAME;
+    // The tooltip shows a curated translation of well-known names; the panel's
+    // dataset record underneath always carries the verbatim value.
     const label =
       typeof name === 'string' && name.trim() !== ''
-        ? name.trim()
+        ? (glossName(name, localeCode) ?? name.trim())
         : strings.unnamedTerritory;
 
     this.tooltip.textContent = label;
@@ -558,6 +575,25 @@ export class TerritoryMap {
     this.map.setPaintProperty(HOVER_HALO_LAYER, 'line-color', this.glowColor());
     this.map.setPaintProperty(HOVER_LAYER, 'line-color', dark ? '#ffffff' : '#1a1a19');
     this.map.setPaintProperty(SELECTED_LAYER, 'line-color', dark ? '#ffd54a' : '#8a4b00');
+  }
+
+  /**
+   * Re-applies translated text on map chrome after a language switch. MapLibre
+   * reads its locale once at construction, so the control buttons and the
+   * canvas label are patched directly.
+   */
+  retranslate(): void {
+    const container = this.map.getContainer();
+    const patch = (selector: string, label: string) => {
+      const node = container.querySelector<HTMLElement>(selector);
+      if (!node) return;
+      node.setAttribute('aria-label', label);
+      if (node.tagName === 'BUTTON') node.setAttribute('title', label);
+    };
+    patch('.maplibregl-ctrl-zoom-in', strings.zoomIn);
+    patch('.maplibregl-ctrl-zoom-out', strings.zoomOut);
+    patch('.maplibregl-ctrl-attrib-button', strings.toggleAttribution);
+    this.map.getCanvas().setAttribute('aria-label', strings.mapAriaLabel);
   }
 
   resetView(): void {

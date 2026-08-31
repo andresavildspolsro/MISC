@@ -7,6 +7,13 @@ export const cs: Strings = {
 
   languageLabel: 'Jazyk',
 
+  zoomIn: 'Přiblížit',
+  zoomOut: 'Oddálit',
+  toggleAttribution: 'Zobrazit/skrýt atribuci',
+  mapAriaLabel: 'Mapa historických hranic',
+  panelAriaLabel: 'Detail území',
+  factsAriaLabel: 'Zajímavosti',
+
   appTitle: 'Historické hranice světa',
   appTagline: 'Politické a kulturní hranice, snímek po snímku',
 
@@ -125,7 +132,6 @@ export const cs: Strings = {
   footerLicenseName: 'GNU General Public License v3.0',
   footerSnapshotCommit: (commit) => `Verze datové sady: commit ${commit}`,
   footerBasemapHeading: 'Podkladová mapa',
-  basemapAttributionShort: 'Pobřeží: Natural Earth',
   footerBasemapAttribution: 'Pobřeží: Natural Earth (volné dílo), servírováno přímo z tohoto webu — bez poskytovatele dlaždic a bez API klíče',
   footerRendererHeading: 'Vykreslování',
   footerRenderer: 'Vykresleno pomocí MapLibre GL JS, licence BSD-3-Clause.',
@@ -137,5 +143,5 @@ export const cs: Strings = {
   footerUnsimplified:
     'Geometrie se zobrazuje přesně tak, jak je publikována ve zdroji, bez zjednodušení.',
   footerLanguageNote:
-    'Přeloženo je pouze rozhraní. Názvy území a všechny ostatní hodnoty se zobrazují přesně tak, jak je uvádí datová sada, v jejím vlastním jazyce.',
+    'Přeloženo je rozhraní a u známých celků i název v titulku a bublině (ručně sestavený překlad). Samotný záznam datové sady — řádky NAME, SUBJECTO a další — se vždy zobrazuje doslovně tak, jak jej sada uvádí.',
 };

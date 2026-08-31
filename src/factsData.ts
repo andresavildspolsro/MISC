@@ -196,7 +196,7 @@ export const FACTS: Fact[] = [
       en: 'Morocco: The Chouara tanneries have by tradition worked since the 11th century; hides are still hand-dyed in stone vats using pigeon droppings and other traditional ingredients.',
       es: 'Marruecos: Las curtidurías de Chouara funcionan, según la tradición, desde el siglo XI; las pieles se tiñen aún a mano en tinas de piedra con excremento de paloma y otros ingredientes tradicionales.',
     },
-    source: { label: 'Wikipedie — hledat: Chouara Tannery', url: 'https://en.wikipedia.org/w/index.php?search=Chouara%20Tannery' },
+    source: { label: 'Wikipedia: Chouara Tannery', url: 'https://en.wikipedia.org/w/index.php?search=Chouara%20Tannery' },
   },
   {
     id: 'alamut',
@@ -273,7 +273,7 @@ export const FACTS: Fact[] = [
       en: 'Switzerland: The bridge over the wild Schöllenen gorge (13th century onward) carries the legend of a pact with the devil: he builds the bridge in exchange for the soul of the first to cross — the locals sent a goat.',
       es: 'Suiza: Al puente sobre la salvaje garganta de Schöllenen (desde el siglo XIII) lo acompaña la leyenda de un pacto con el diablo: él construye el puente a cambio del alma del primero en cruzarlo, y los lugareños enviaron una cabra.',
     },
-    source: { label: 'Wikipedie — hledat: Teufelsbrücke Schöllenen', url: 'https://en.wikipedia.org/w/index.php?search=Sch%C3%B6llenen%20Gorge%20Devil%27s%20Bridge' },
+    source: { label: 'Wikipedia: Teufelsbrücke Schöllenen', url: 'https://en.wikipedia.org/w/index.php?search=Sch%C3%B6llenen%20Gorge%20Devil%27s%20Bridge' },
   },
   {
     id: 'rapa-nui-moai',
@@ -339,7 +339,7 @@ export const FACTS: Fact[] = [
       en: 'Netherlands: A monastery founded in 1465, the only rural monastery in the country to survive the Reformation; legends of white ladies and secret underground passages cling to it.',
       es: 'Países Bajos: Un monasterio fundado en 1465, el único rural del país que sobrevivió a la Reforma; lo rodean leyendas de damas blancas y pasadizos subterráneos secretos.',
     },
-    source: { label: 'Wikipedie — hledat: Ter Apel monastery', url: 'https://en.wikipedia.org/w/index.php?search=Ter%20Apel%20monastery' },
+    source: { label: 'Wikipedia: Ter Apel monastery', url: 'https://en.wikipedia.org/w/index.php?search=Ter%20Apel%20monastery' },
   },
   {
     id: 'machu-picchu',
@@ -581,7 +581,7 @@ export const FACTS: Fact[] = [
       en: 'Solomon Islands: The largest uninhabited island of the South Pacific was abandoned by its people all at once in the mid-19th century — by oral tradition, out of fear of headhunting raids.',
       es: 'Islas Salomón: La mayor isla deshabitada del Pacífico Sur fue abandonada por su gente de golpe a mediados del siglo XIX; según la tradición oral, por miedo a las incursiones de cazadores de cabezas.',
     },
-    source: { label: 'Wikipedie — hledat: Tetepare Island', url: 'https://en.wikipedia.org/w/index.php?search=Tetepare%20Island' },
+    source: { label: 'Wikipedia: Tetepare Island', url: 'https://en.wikipedia.org/w/index.php?search=Tetepare%20Island' },
   },
   {
     id: 'waitomo',
@@ -955,7 +955,7 @@ export const FACTS: Fact[] = [
       en: 'Mongolia: The Khongoryn Els dunes in the Gobi “sing” — sliding sand gives off a deep booming tone heard kilometres away, earning them the name Singing Sands.',
       es: 'Mongolia: Las dunas de Khongoryn Els, en el Gobi, «cantan»: la arena al deslizarse emite un tono grave y retumbante audible a kilómetros, lo que les valió el nombre de Arenas Cantoras.',
     },
-    source: { label: 'Wikipedie — hledat: Khongoryn Els', url: 'https://en.wikipedia.org/w/index.php?search=Khongoryn%20Els' },
+    source: { label: 'Wikipedia: Khongoryn Els', url: 'https://en.wikipedia.org/w/index.php?search=Khongoryn%20Els' },
   },
   {
     id: 'chocolate-hills',
@@ -1032,7 +1032,7 @@ export const FACTS: Fact[] = [
       en: 'Bosnia and Herzegovina: Since 2005, amateur researcher Semir Osmanagić has claimed the hills near Visoko are the world’s oldest pyramids; geologists consider them natural formations and reject the claim as pseudoarchaeology.',
       es: 'Bosnia y Herzegovina: Desde 2005, el investigador aficionado Semir Osmanagić sostiene que las colinas de Visoko son las pirámides más antiguas del mundo; los geólogos las consideran formaciones naturales y rechazan la afirmación como pseudoarqueología.',
     },
-    source: { label: 'Wikipedie — hledat: Bosnian pyramid claims', url: 'https://en.wikipedia.org/w/index.php?search=Bosnian%20pyramid%20claims' },
+    source: { label: 'Wikipedia: Bosnian pyramid claims', url: 'https://en.wikipedia.org/w/index.php?search=Bosnian%20pyramid%20claims' },
   },
   {
     id: 'lake-natron',

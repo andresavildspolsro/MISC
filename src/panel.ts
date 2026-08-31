@@ -1,6 +1,7 @@
 import { DERIVED_KEYS } from './data';
 import { formatYear } from './format';
-import { strings } from './strings';
+import { glossName } from './nameGlosses';
+import { localeCode, strings } from './strings';
 import type { ManifestSnapshot, SnapshotFeature } from './types';
 
 /**
@@ -146,7 +147,13 @@ export class DetailPanel {
         ? rawName.trim()
         : strings.unnamedTerritory;
 
-    this.titleNode.textContent = name;
+    // Title and Wikipedia search use the curated translation when one exists;
+    // the NAME row just below always shows the dataset's verbatim value, and a
+    // glossed title carries the original as its hover text.
+    const gloss = name === strings.unnamedTerritory ? null : glossName(name, localeCode);
+    this.titleNode.textContent = gloss ?? name;
+    if (gloss) this.titleNode.title = name;
+    else this.titleNode.removeAttribute('title');
     this.body.innerHTML = '';
 
     /* ---------------------------------------------- documented properties */
@@ -187,11 +194,12 @@ export class DetailPanel {
     /* -------------------------------------------------- external search */
 
     if (name !== strings.unnamedTerritory) {
+      const searchTerm = gloss ?? name;
       const search = element('a', 'panel__external');
-      search.href = `https://${strings.wikipediaHost}/w/index.php?search=${encodeURIComponent(name)}`;
+      search.href = `https://${strings.wikipediaHost}/w/index.php?search=${encodeURIComponent(searchTerm)}`;
       search.target = '_blank';
       search.rel = 'noopener noreferrer';
-      search.textContent = strings.wikipediaSearch(name);
+      search.textContent = strings.wikipediaSearch(searchTerm);
 
       this.body.append(
         element('h3', 'panel__section', strings.externalHeading),

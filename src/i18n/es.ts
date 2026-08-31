@@ -7,6 +7,13 @@ export const es: Strings = {
 
   languageLabel: 'Idioma',
 
+  zoomIn: 'Acercar',
+  zoomOut: 'Alejar',
+  toggleAttribution: 'Mostrar u ocultar la atribución',
+  mapAriaLabel: 'Mapa de fronteras históricas',
+  panelAriaLabel: 'Detalle del territorio',
+  factsAriaLabel: 'Curiosidades',
+
   appTitle: 'Fronteras históricas del mundo',
   appTagline: 'Fronteras políticas y culturales, instantánea a instantánea',
 
@@ -126,7 +133,6 @@ export const es: Strings = {
   footerLicenseName: 'GNU General Public License v3.0',
   footerSnapshotCommit: (commit) => `Versión del conjunto de datos: commit ${commit}`,
   footerBasemapHeading: 'Mapa base',
-  basemapAttributionShort: 'Costas: Natural Earth',
   footerBasemapAttribution: 'Costas: Natural Earth (dominio público), servidas desde este sitio, sin proveedor de teselas ni clave de API',
   footerRendererHeading: 'Renderizado',
   footerRenderer: 'Renderizado con MapLibre GL JS, licencia BSD-3-Clause.',
@@ -138,5 +144,5 @@ export const es: Strings = {
   footerUnsimplified:
     'La geometría se sirve exactamente como se publica en el origen, sin simplificar.',
   footerLanguageNote:
-    'Solo se traduce la interfaz. Los nombres de los territorios y el resto de valores se muestran tal como los registra el conjunto de datos, en su propio idioma.',
+    'Se traduce la interfaz y, para entidades conocidas, el nombre del título y la burbuja (traducción curada a mano). El registro del conjunto de datos —las filas NAME, SUBJECTO y demás— se muestra siempre literalmente, tal como lo recoge el conjunto de datos.',
 };
