@@ -17,6 +17,8 @@ export const en: Strings = {
   unknownYearRequested: (requested, shown) =>
     `The dataset has no snapshot for ${requested}. Showing ${shown} instead — the nearest year is not substituted.`,
 
+  manifestLoadError: 'The list of snapshots could not be loaded. Please reload the page.',
+
   showingYear: 'Showing',
   featureCount: (n) => `${n} territories in this snapshot`,
 
@@ -34,6 +36,11 @@ export const en: Strings = {
     'Snapshots are spaced evenly along this axis, not in proportion to elapsed time. The gaps between them range from a decade to tens of millennia.',
   goToYear: (year) => `Go to the ${year} snapshot`,
   snapshotPosition: (index, total) => `Snapshot ${index} of ${total}`,
+
+  yearJumpTitle: 'Go to a year — click and type',
+  yearJumpPlaceholder: 'e.g. 1416, negative = BC',
+  nearestSnapshotShown: (requested, shown) =>
+    `The dataset has no snapshot for ${requested}; showing the nearest one, ${shown}.`,
 
   basemapToggle: 'Modern basemap',
   basemapOn: 'on',
@@ -91,6 +98,14 @@ export const en: Strings = {
   externalHeading: 'Look this up elsewhere',
   externalDisclaimer: 'External search — not part of the dataset.',
   wikipediaSearch: (name) => `Search Wikipedia for “${name}”`,
+
+  factsToggle: 'Interesting facts',
+  factsHeading: 'Interesting facts',
+  factsDisclaimer: 'Added context — not part of the border dataset.',
+  factsSource: 'Source',
+  factsUnverified: 'no source given — unverified',
+  factsNoneForYear: 'No facts for this snapshot yet.',
+  factsUntranslated: 'Not available in this language; shown in its original language.',
 
   disclaimerTitle: 'Borders before 1648 are approximations',
   disclaimerBody:

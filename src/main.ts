@@ -85,6 +85,16 @@ function indexFromLocation(snapshots: ManifestSnapshot[]): RequestedYear {
   return index === -1 ? { index: null, unmatched: raw } : { index, unmatched: null };
 }
 
+function resolveBasemapSources(manifest: Manifest) {
+  const files = manifest.basemap?.files;
+  const coarseLand = files?.ne_110m_land?.path;
+  const coarseLakes = files?.ne_110m_lakes?.path;
+  const detailLand = files?.ne_50m_land?.path;
+  const detailLakes = files?.ne_50m_lakes?.path;
+  if (!coarseLand || !coarseLakes || !detailLand || !detailLakes) return null;
+  return { coarseLand, coarseLakes, detailLand, detailLakes };
+}
+
 /* --------------------------------------------------------------------- app */
 
 class App {
@@ -130,12 +140,9 @@ class App {
         onSelect: (index) => this.handleSelect(index),
         onHover: (index) => this.handleHover(index),
       },
-      {
-        coarseLand: manifest.basemap.files.ne_110m_land.path,
-        coarseLakes: manifest.basemap.files.ne_110m_lakes.path,
-        detailLand: manifest.basemap.files.ne_50m_land.path,
-        detailLakes: manifest.basemap.files.ne_50m_lakes.path,
-      },
+      // A stale cached manifest may predate the vendored basemap. The map
+      // must come up without it rather than dying in the constructor.
+      resolveBasemapSources(manifest),
     );
 
     this.panel = new DetailPanel(requireElement('#panel'), () => this.clearSelection());
@@ -435,6 +442,6 @@ loadManifest()
     if (status) {
       status.hidden = false;
       status.classList.add('status--error');
-      status.textContent = strings.loadError(strings.loading);
+      status.textContent = strings.manifestLoadError;
     }
   });

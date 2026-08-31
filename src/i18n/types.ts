@@ -27,6 +27,8 @@ export interface Strings {
   loadError: (year: string) => string;
   /** A ?year= that is not a dataset year is reported, never rounded silently. */
   unknownYearRequested: (requested: string, shown: string) => string;
+  /** Start-up failure before any snapshot list exists. */
+  manifestLoadError: string;
 
   showingYear: string;
   featureCount: (n: string) => string;
@@ -44,6 +46,16 @@ export interface Strings {
   timelineNote: string;
   goToYear: (year: string) => string;
   snapshotPosition: (index: string, total: string) => string;
+
+  /** Clicking the big year readout opens a type-a-year jump box. */
+  yearJumpTitle: string;
+  yearJumpPlaceholder: string;
+  /**
+   * Shown after an interactive jump lands on the nearest snapshot. Unlike a
+   * shared ?year= link (which refuses to substitute), a typed year is a
+   * navigation request — but the substitution is still said out loud.
+   */
+  nearestSnapshotShown: (requested: string, shown: string) => string;
 
   basemapToggle: string;
   basemapOn: string;
@@ -78,6 +90,19 @@ export interface Strings {
   externalHeading: string;
   externalDisclaimer: string;
   wikipediaSearch: (name: string) => string;
+
+  /**
+   * The facts feature. Facts are added context, NOT dataset content — they are
+   * kept out of the dataset panel, carry their own disclaimer, and each one is
+   * expected to cite an external source.
+   */
+  factsToggle: string;
+  factsHeading: string;
+  factsDisclaimer: string;
+  factsSource: string;
+  factsUnverified: string;
+  factsNoneForYear: string;
+  factsUntranslated: string;
 
   disclaimerTitle: string;
   disclaimerBody: string;

@@ -17,6 +17,8 @@ export const es: Strings = {
   unknownYearRequested: (requested, shown) =>
     `El conjunto de datos no tiene ninguna instantánea de ${requested}. Se muestra ${shown} en su lugar: no se sustituye por el año más cercano.`,
 
+  manifestLoadError: 'No se pudo cargar la lista de instantáneas. Recarga la página, por favor.',
+
   showingYear: 'Mostrando',
   featureCount: (n) => `${n} territorios en esta instantánea`,
 
@@ -34,6 +36,11 @@ export const es: Strings = {
     'Las instantáneas están repartidas de forma uniforme en este eje, no en proporción al tiempo transcurrido. Los intervalos entre ellas van de una década a decenas de milenios.',
   goToYear: (year) => `Ir a la instantánea de ${year}`,
   snapshotPosition: (index, total) => `Instantánea ${index} de ${total}`,
+
+  yearJumpTitle: 'Ir a un año: haz clic y escribe',
+  yearJumpPlaceholder: 'p. ej. 1416, negativo = a. C.',
+  nearestSnapshotShown: (requested, shown) =>
+    `El conjunto de datos no tiene instantánea de ${requested}; se muestra la más cercana, ${shown}.`,
 
   basemapToggle: 'Mapa base moderno',
   basemapOn: 'activo',
@@ -92,6 +99,14 @@ export const es: Strings = {
   externalHeading: 'Buscarlo en otro sitio',
   externalDisclaimer: 'Búsqueda externa: no forma parte del conjunto de datos.',
   wikipediaSearch: (name) => `Buscar «${name}» en Wikipedia`,
+
+  factsToggle: 'Curiosidades',
+  factsHeading: 'Curiosidades',
+  factsDisclaimer: 'Contexto añadido: no forma parte del conjunto de datos de fronteras.',
+  factsSource: 'Fuente',
+  factsUnverified: 'sin fuente indicada — sin verificar',
+  factsNoneForYear: 'Aún no hay curiosidades para esta instantánea.',
+  factsUntranslated: 'No disponible en este idioma; se muestra en su idioma original.',
 
   disclaimerTitle: 'Las fronteras anteriores a 1648 son aproximaciones',
   disclaimerBody:

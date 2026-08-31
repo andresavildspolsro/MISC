@@ -17,6 +17,8 @@ export const cs: Strings = {
   unknownYearRequested: (requested, shown) =>
     `Datová sada nemá snímek pro rok ${requested}. Zobrazuje se ${shown} — nejbližší rok se nedosazuje.`,
 
+  manifestLoadError: 'Nepodařilo se načíst seznam snímků. Obnovte prosím stránku.',
+
   showingYear: 'Zobrazeno',
   featureCount: (n) => `${n} území v tomto snímku`,
 
@@ -34,6 +36,11 @@ export const cs: Strings = {
     'Snímky jsou na této ose rozmístěny rovnoměrně, nikoli úměrně uplynulému času. Mezery mezi nimi sahají od deseti let po desítky tisíciletí.',
   goToYear: (year) => `Přejít na snímek pro rok ${year}`,
   snapshotPosition: (index, total) => `Snímek ${index} z ${total}`,
+
+  yearJumpTitle: 'Přejít na rok — klikni a napiš',
+  yearJumpPlaceholder: 'např. 1416, záporné = př. n. l.',
+  nearestSnapshotShown: (requested, shown) =>
+    `Pro rok ${requested} datová sada snímek nemá; zobrazen nejbližší, ${shown}.`,
 
   basemapToggle: 'Moderní podklad',
   basemapOn: 'zap.',
@@ -91,6 +98,14 @@ export const cs: Strings = {
   externalHeading: 'Vyhledat jinde',
   externalDisclaimer: 'Externí vyhledávání — není součástí datové sady.',
   wikipediaSearch: (name) => `Hledat „${name}“ na Wikipedii`,
+
+  factsToggle: 'Zajímavosti',
+  factsHeading: 'Zajímavosti',
+  factsDisclaimer: 'Doplněný kontext — není součástí datové sady hranic.',
+  factsSource: 'Zdroj',
+  factsUnverified: 'bez uvedeného zdroje — neověřeno',
+  factsNoneForYear: 'K tomuto snímku zatím žádné zajímavosti nejsou.',
+  factsUntranslated: 'V tomto jazyce není k dispozici; zobrazeno v původním znění.',
 
   disclaimerTitle: 'Hranice před rokem 1648 jsou přibližné',
   disclaimerBody:

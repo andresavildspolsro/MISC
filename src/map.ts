@@ -102,7 +102,7 @@ export class TerritoryMap {
   private selectedId: number | null = null;
   private dark = false;
   private basemapVisible = true;
-  private readonly basemap: BasemapSources;
+  private readonly basemap: BasemapSources | null;
   /** Set once the finer coastline has been requested, so it is fetched once. */
   private detailRequested = false;
 
@@ -110,7 +110,7 @@ export class TerritoryMap {
     container: HTMLElement,
     tooltip: HTMLElement,
     callbacks: MapCallbacks,
-    basemap: BasemapSources,
+    basemap: BasemapSources | null,
   ) {
     this.tooltip = tooltip;
     this.callbacks = callbacks;
@@ -155,7 +155,9 @@ export class TerritoryMap {
     // the borders — the actual subject of this map — from ever being drawn.
     this.map.on('style.load', () => {
       this.ready = true;
-      void this.loadBasemap(this.basemap.coarseLand, this.basemap.coarseLakes);
+      if (this.basemap) {
+        void this.loadBasemap(this.basemap.coarseLand, this.basemap.coarseLakes);
+      }
       if (this.pendingData) {
         this.setData(this.pendingData);
         this.pendingData = null;
@@ -164,7 +166,7 @@ export class TerritoryMap {
 
     // The finer coastline is worth its 2.4 MB only once someone zooms in.
     this.map.on('zoomend', () => {
-      if (this.detailRequested || this.map.getZoom() < DETAIL_ZOOM) return;
+      if (!this.basemap || this.detailRequested || this.map.getZoom() < DETAIL_ZOOM) return;
       this.detailRequested = true;
       void this.loadBasemap(this.basemap.detailLand, this.basemap.detailLakes);
     });

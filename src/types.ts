@@ -26,7 +26,8 @@ export interface BasemapManifest {
 }
 
 export interface Manifest {
-  basemap: BasemapManifest;
+  /** Absent in manifests produced before the basemap was vendored. */
+  basemap?: BasemapManifest;
   generatedFrom: {
     repository: string;
     commit: string;
