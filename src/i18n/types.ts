@@ -140,6 +140,12 @@ export interface Strings {
   playChapter: string;
   pauseChapter: string;
   chapterOpenAria: (name: string, range: string) => string;
+  /** Legend label before the conflict-side chips in a chapter header. */
+  chapterSidesLabel: string;
+
+  /** Hold-to-compare overlay of the newest snapshot's borders. */
+  modernHold: string;
+  modernHoldTitle: (snapshotYear: string) => string;
 
   disclaimerTitle: string;
   disclaimerBody: string;

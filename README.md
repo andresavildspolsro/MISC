@@ -93,6 +93,22 @@ displayed as "not in dataset" rather than filled in.
   before the period" button that jumps to the last snapshot preceding it.
   Deep-linkable as `?period=<id>`; milestone references are validated at
   start-up and broken or out-of-range ones are dropped with a console warning.
+- **Conflict sides.** A chapter may declare sides (`sides` in
+  `src/periodsData.ts`): lists of dataset NAME values — verbatim, including
+  the dataset's own spellings ("Kingfom of Italy") — tinted per side with a
+  colour-keyed legend in the chapter header. Matching is exact and the tint is
+  drawn only on the dataset's own polygons; a participant the shown snapshot
+  does not name simply stays untinted. The Hussite Wars chapter deliberately
+  has no sides: the dataset draws no separate Bohemia at its snapshot.
+- **Hold-to-compare "Today" button.** Holding it overlays today's borders as
+  an outline — the dataset's own newest snapshot (2010), fetched on first
+  press, never a hand-drawn "modern map".
+- **Event spotlight.** While an event popup is open in the main view, the
+  dataset territories containing the event's coordinates stay lit and the
+  rest of the rendering dims behind a veil. The spotlight is a pure
+  point-in-polygon lookup against the loaded snapshot — dataset polygons only;
+  an event at sea spotlights nothing. Inside a chapter the veil is not used —
+  the frame and side tints already carry the context there.
 
 ## Licensing
 

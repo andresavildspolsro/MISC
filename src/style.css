@@ -1186,3 +1186,61 @@ a:hover {
     margin-left: 0;
   }
 }
+
+/* ------------------------------------------- hold-to-compare and sides */
+
+.control--hold {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.control--hold:active {
+  background: var(--surface-sunken);
+  border-color: var(--border-strong);
+}
+
+.chapter__sides {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.chapter__sides-label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sidechip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.sidechip__swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* Keep in sync with SIDE_COLORS in src/map.ts (light, then dark below). */
+.sidechip__swatch--0 { background: #1d63c9; }
+.sidechip__swatch--1 { background: #c22f21; }
+.sidechip__swatch--2 { background: #6d28b8; }
+
+@media (prefers-color-scheme: dark) {
+  .sidechip__swatch--0 { background: #6ea8ff; }
+  .sidechip__swatch--1 { background: #ff8a7a; }
+  .sidechip__swatch--2 { background: #c99cff; }
+}

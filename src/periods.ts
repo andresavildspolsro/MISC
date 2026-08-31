@@ -16,6 +16,20 @@ import type { LocaleCode } from './strings';
 
 export type PeriodCategory = 'war' | 'discovery' | 'revolution' | 'era';
 
+/**
+ * One side of a chapter's conflict, for tinting territories.
+ *
+ * `territories` lists dataset NAME values verbatim (including the dataset's
+ * own spellings — "Kingfom of Italy", "Scottland"), across every snapshot the
+ * chapter can show. Matching is exact: a participant the shown snapshot does
+ * not name simply stays untinted, which is the honest outcome — the tint
+ * never outlines a shape the dataset does not draw.
+ */
+export interface PeriodSide {
+  name: Record<LocaleCode, string>;
+  territories: string[];
+}
+
 export interface Period {
   id: string;
   /** Inclusive year range; negative = BC. */
@@ -28,6 +42,8 @@ export interface Period {
   description: Record<LocaleCode, string>;
   /** Event ids from the events layer, the chapter's milestones. */
   milestones: string[];
+  /** Optional conflict sides; omitted when the dataset cannot express them. */
+  sides?: PeriodSide[];
   source: { label: string; url: string };
 }
 
@@ -42,6 +58,7 @@ export function P(
   descriptions: [string, string, string],
   milestones: string[],
   wikipediaUrl: string,
+  sides?: Array<{ names: [string, string, string]; territories: string[] }>,
 ): Period {
   const article = decodeURIComponent(wikipediaUrl.split('/wiki/')[1] ?? '').replace(/_/g, ' ');
   return {
@@ -53,6 +70,10 @@ export function P(
     name: { cs: names[0], en: names[1], es: names[2] },
     description: { cs: descriptions[0], en: descriptions[1], es: descriptions[2] },
     milestones,
+    sides: sides?.map((side) => ({
+      name: { cs: side.names[0], en: side.names[1], es: side.names[2] },
+      territories: side.territories,
+    })),
     source: { label: article ? `Wikipedia: ${article}` : 'Wikipedia', url: wikipediaUrl },
   };
 }

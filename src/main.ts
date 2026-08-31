@@ -18,6 +18,7 @@ import { PERIODS } from './periodsData';
 import { FACTS, factsForYear } from './facts';
 import { FactsCard } from './factsCard';
 import { formatCount, formatYear, formatYearShort } from './format';
+import { featureContains } from './geo';
 import { TerritoryMap } from './map';
 import { DetailPanel } from './panel';
 import {
@@ -148,6 +149,11 @@ class App {
   /** Milestones resolved once at start-up so broken references warn early. */
   private readonly milestonesByPeriod = new Map<string, HistEvent[]>();
 
+  /** Hold-to-compare overlay of the newest snapshot's borders. */
+  private readonly modernHoldButton = requireElement<HTMLButtonElement>('#modern-hold');
+  private modernRequested = false;
+  private modernPressed = false;
+
   private collection: SnapshotCollection | null = null;
   private currentIndex = 0;
   /** Set once the user touches the basemap toggle; suppresses the auto default. */
@@ -177,6 +183,7 @@ class App {
         onSelect: (index) => this.handleSelect(index),
         onHover: (index) => this.handleHover(index),
         onEventsClick: (ids, at) => this.handleEventsClick(ids, at),
+        onPopupClose: () => this.map.setSpotlight(null),
       },
       // A stale cached manifest may predate the vendored basemap. The map
       // must come up without it rather than dying in the constructor.
@@ -325,6 +332,8 @@ class App {
       this.publishEventMarks();
     }
 
+    this.bindModernHold();
+
     requireElement('#chapter-exit').addEventListener('click', () => this.exitChapter());
     requireElement<HTMLButtonElement>('#chapter-prestate').addEventListener('click', () => {
       const index = Number(requireElement('#chapter-prestate').dataset.index);
@@ -345,6 +354,68 @@ class App {
     });
 
     window.addEventListener('resize', () => this.map.resize());
+  }
+
+  /**
+   * The "Today" button: while held, today's borders — the newest snapshot of
+   * the same dataset — overlay the map as an outline for comparison. The
+   * snapshot is fetched on the first press, not at start-up.
+   */
+  private bindModernHold(): void {
+    this.applyModernHoldTitle();
+
+    const press = () => {
+      if (this.modernPressed) return;
+      this.modernPressed = true;
+      if (!this.modernRequested) {
+        this.modernRequested = true;
+        void loadSnapshot(this.snapshots[this.snapshots.length - 1])
+          .then((collection) => {
+            this.map.setModernData(collection);
+            if (this.modernPressed) this.map.setModernVisible(true);
+          })
+          .catch((error) => {
+            console.error(error);
+            this.modernRequested = false; // let a later press retry
+          });
+        return;
+      }
+      this.map.setModernVisible(true);
+    };
+    const release = () => {
+      if (!this.modernPressed) return;
+      this.modernPressed = false;
+      this.map.setModernVisible(false);
+    };
+
+    const button = this.modernHoldButton;
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      button.setPointerCapture(event.pointerId);
+      press();
+    });
+    for (const type of ['pointerup', 'pointercancel'] as const) {
+      button.addEventListener(type, release);
+    }
+    button.addEventListener('keydown', (event) => {
+      if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) {
+        event.preventDefault();
+        press();
+      }
+    });
+    button.addEventListener('keyup', (event) => {
+      if (event.key === ' ' || event.key === 'Enter') release();
+    });
+    button.addEventListener('blur', release);
+    button.addEventListener('contextmenu', (event) => event.preventDefault());
+  }
+
+  private applyModernHoldTitle(): void {
+    const title = strings.modernHoldTitle(
+      formatYear(this.snapshots[this.snapshots.length - 1].year),
+    );
+    this.modernHoldButton.title = title;
+    this.modernHoldButton.setAttribute('aria-label', title);
   }
 
   private setLanguage(code: LocaleCode): void {
@@ -377,6 +448,7 @@ class App {
     this.renderChaptersStrip();
     this.renderChapterChrome();
     this.chapterAxis.retranslate();
+    this.applyModernHoldTitle();
 
     const snapshot = this.snapshots[this.currentIndex];
     this.setBasemap(this.map.isBasemapVisible());
@@ -529,6 +601,9 @@ class App {
     this.renderChapterChrome();
     this.chapterAxis.setPeriod(period, milestones);
     this.map.focusBounds(period.bounds);
+    this.map.setSides(
+      period.sides?.map((side) => ({ names: side.territories })) ?? null,
+    );
 
     const url = new URL(window.location.href);
     url.searchParams.set('period', period.id);
@@ -546,6 +621,7 @@ class App {
     this.chapterNode.hidden = true;
     this.chaptersNode.hidden = false;
     this.timelineNode.hidden = false;
+    this.map.setSides(null);
 
     const url = new URL(window.location.href);
     url.searchParams.delete('period');
@@ -564,6 +640,7 @@ class App {
     requireElement('#chapter-title').textContent = period.name[localeCode];
     requireElement('#chapter-range').textContent = this.periodRange(period);
     requireElement('#chapter-desc').textContent = period.description[localeCode];
+    this.renderSidesLegend(period);
 
     const note = requireElement('#chapter-note');
     const hasSnapshotInRange = this.snapshots.some(
@@ -594,6 +671,32 @@ class App {
     }
 
     this.updateChapterBadge();
+  }
+
+  /** Colour-keyed legend of the chapter's conflict sides, when it has any. */
+  private renderSidesLegend(period: Period): void {
+    const node = requireElement('#chapter-sides');
+    node.innerHTML = '';
+    const sides = period.sides ?? [];
+    node.hidden = sides.length === 0;
+    if (sides.length === 0) return;
+
+    const label = document.createElement('span');
+    label.className = 'chapter__sides-label';
+    label.textContent = `${strings.chapterSidesLabel}:`;
+    node.append(label);
+
+    sides.forEach((side, index) => {
+      const chip = document.createElement('span');
+      chip.className = 'sidechip';
+      const swatch = document.createElement('span');
+      // Swatch colours live in CSS (.sidechip__swatch--N), matching the map's
+      // SIDE_COLORS in both themes.
+      swatch.className = `sidechip__swatch sidechip__swatch--${index % 3}`;
+      swatch.setAttribute('aria-hidden', 'true');
+      chip.append(swatch, document.createTextNode(side.name[localeCode]));
+      node.append(chip);
+    });
   }
 
   /** The permanent "Borders: <year> snapshot" badge in the chapter header. */
@@ -662,6 +765,32 @@ class App {
       root.append(item);
     }
     this.map.showPopup(at as [number, number], root);
+    this.spotlightEvents(events);
+  }
+
+  /**
+   * While an event popup is open, the dataset territories containing the
+   * event's coordinates stay lit and the rest of the map dims. Pure lookup:
+   * the spotlight is the dataset's own polygons, never a drawn region. Events
+   * at sea or on unmapped ground spotlight nothing and the map stays as is.
+   */
+  private spotlightEvents(events: HistEvent[]): void {
+    // Inside a chapter the frame and the side tints already carry the context,
+    // and the milestone popup is open nearly all the time — a permanent veil
+    // would just hide the sides. The spotlight belongs to the main view.
+    if (this.activePeriod) {
+      this.map.setSpotlight(null);
+      return;
+    }
+    const features = this.collection?.features;
+    if (!features) return;
+    const ids = new Set<number>();
+    for (const event of events) {
+      features.forEach((feature, index) => {
+        if (featureContains(feature, event.lon, event.lat)) ids.add(index);
+      });
+    }
+    this.map.setSpotlight(ids.size > 0 ? [...ids] : null);
   }
 
   /** A timeline anchor mark: jump to the first snapshot after the event. */

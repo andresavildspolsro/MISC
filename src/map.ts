@@ -37,6 +37,48 @@ const BASEMAP_LAYERS = [LAND_LAYER, LAKES_LAYER, COAST_LAYER];
 const EVENTS_SOURCE = 'events-source';
 const EVENTS_LAYER = 'events-points';
 const BACKGROUND_LAYER = 'background';
+const SIDES_FILL_LAYER = 'sides-fill';
+const SIDES_LINE_LAYER = 'sides-line';
+const VEIL_SOURCE = 'veil-source';
+const VEIL_LAYER = 'veil';
+const SPOT_FILL_LAYER = 'spotlight-fill';
+const SPOT_LINE_LAYER = 'spotlight-line';
+const MODERN_SOURCE = 'modern-source';
+const MODERN_LAYER = 'modern-outline';
+
+/**
+ * Colour pairs for chapter sides (light, dark). Purely presentational — a
+ * side's tint sits on top of dataset polygons matched by NAME, never on
+ * geometry of its own.
+ */
+const SIDE_COLORS: Array<[string, string]> = [
+  ['#1d63c9', '#6ea8ff'],
+  ['#c22f21', '#ff8a7a'],
+  ['#6d28b8', '#c99cff'],
+];
+
+/**
+ * A whole-world rectangle for the spotlight veil. Presentation only, like the
+ * background layer: it dims the rendering, it does not claim any geography.
+ */
+const VEIL_RECT: GeoJSON.FeatureCollection = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]],
+        ],
+      },
+    },
+  ],
+};
+
+/** A filter that matches nothing; used to park the spotlight layers. */
+const MATCH_NOTHING: ExpressionSpecification = ['==', ['id'], -999];
 
 /**
  * The opening view. The dataset is worldwide and is never clipped, so the map
@@ -108,6 +150,8 @@ export interface MapCallbacks {
   onSelect: (featureIndex: number | null) => void;
   /** Click on one or more event points (ids in popup order). */
   onEventsClick: (eventIds: string[], at: LngLatLike) => void;
+  /** The popup went away, for any reason — user close, programmatic, new one. */
+  onPopupClose?: () => void;
   /**
    * Fires when the pointer crosses into a different territory, and with `null`
    * when it leaves the map. Indices mean the same thing as in `onSelect`.
@@ -133,6 +177,11 @@ export class TerritoryMap {
   private readonly basemap: BasemapSources | null;
   /** Set once the finer coastline has been requested, so it is fetched once. */
   private detailRequested = false;
+  /** Chapter sides currently tinted, kept for dark-mode repaints. */
+  private sides: Array<{ names: string[] }> | null = null;
+  /** Feature ids currently spotlit (everything else is veiled), or null. */
+  private spotlightIds: number[] | null = null;
+  private modernVisible = false;
 
   constructor(
     container: HTMLElement,
@@ -236,6 +285,8 @@ export class TerritoryMap {
         },
         [LAKES_SOURCE]: { type: 'geojson', data: EMPTY },
         [EVENTS_SOURCE]: { type: 'geojson', data: EMPTY },
+        [VEIL_SOURCE]: { type: 'geojson', data: VEIL_RECT },
+        [MODERN_SOURCE]: { type: 'geojson', data: EMPTY, tolerance: 0.15 },
         [SOURCE_ID]: {
           type: 'geojson',
           data: EMPTY,
@@ -286,6 +337,22 @@ export class TerritoryMap {
             'fill-opacity': this.fillOpacityExpression(),
             'fill-antialias': true,
           },
+        },
+        {
+          // Chapter sides: a translucent tint over territories matched by
+          // NAME. Parked on a match-nothing filter outside chapter mode.
+          id: SIDES_FILL_LAYER,
+          type: 'fill',
+          source: SOURCE_ID,
+          filter: MATCH_NOTHING,
+          paint: { 'fill-color': 'rgba(0,0,0,0)', 'fill-opacity': 0.8 },
+        },
+        {
+          id: SIDES_LINE_LAYER,
+          type: 'line',
+          source: SOURCE_ID,
+          filter: MATCH_NOTHING,
+          paint: { 'line-color': 'rgba(0,0,0,0)', 'line-width': 2.2, 'line-opacity': 1 },
         },
         {
           // Borders the dataset records as legally determined: crisp and solid.
@@ -365,6 +432,53 @@ export class TerritoryMap {
             'line-color': this.dark ? '#ffd54a' : '#8a4b00',
             'line-width': 2.6,
             'line-opacity': 1,
+          },
+        },
+        {
+          // The spotlight veil: greys the whole rendering while an event
+          // popup is open. Its opacity is 0 unless a spotlight is active.
+          id: VEIL_LAYER,
+          type: 'fill',
+          source: VEIL_SOURCE,
+          paint: {
+            'fill-color': this.dark ? '#0c0c0b' : '#f2f1ec',
+            'fill-opacity': 0,
+            'fill-opacity-transition': { duration: 250 },
+          },
+        },
+        {
+          // The spotlit territories, redrawn above the veil in full colour.
+          id: SPOT_FILL_LAYER,
+          type: 'fill',
+          source: SOURCE_ID,
+          filter: MATCH_NOTHING,
+          paint: {
+            'fill-color': this.fillColorExpression(),
+            'fill-opacity': 0.85,
+          },
+        },
+        {
+          id: SPOT_LINE_LAYER,
+          type: 'line',
+          source: SOURCE_ID,
+          filter: MATCH_NOTHING,
+          paint: {
+            'line-color': this.dark ? '#f4f3ee' : '#14140f',
+            'line-width': 1.6,
+            'line-opacity': 0.9,
+          },
+        },
+        {
+          // Today's borders (the newest dataset snapshot), shown only while
+          // the hold-to-compare button is pressed.
+          id: MODERN_LAYER,
+          type: 'line',
+          source: MODERN_SOURCE,
+          paint: {
+            'line-color': this.dark ? '#f4f3ee' : '#14140f',
+            'line-width': 1.3,
+            'line-opacity': 0,
+            'line-opacity-transition': { duration: 150 },
           },
         },
         {
@@ -639,6 +753,7 @@ export class TerritoryMap {
       .setLngLat(at)
       .setDOMContent(content)
       .addTo(this.map);
+    this.popup.on('close', () => this.callbacks.onPopupClose?.());
   }
 
   closePopup(): void {
@@ -680,6 +795,102 @@ export class TerritoryMap {
     this.map.setPaintProperty(SELECTED_LAYER, 'line-color', dark ? '#ffd54a' : '#8a4b00');
     this.map.setPaintProperty(EVENTS_LAYER, 'circle-color', dark ? '#ff7a70' : '#b3261e');
     this.map.setPaintProperty(EVENTS_LAYER, 'circle-stroke-color', dark ? '#1a1a19' : '#ffffff');
+    this.map.setPaintProperty(VEIL_LAYER, 'fill-color', dark ? '#0c0c0b' : '#f2f1ec');
+    this.map.setPaintProperty(SPOT_FILL_LAYER, 'fill-color', this.fillColorExpression());
+    this.map.setPaintProperty(SPOT_LINE_LAYER, 'line-color', dark ? '#f4f3ee' : '#14140f');
+    this.map.setPaintProperty(MODERN_LAYER, 'line-color', dark ? '#f4f3ee' : '#14140f');
+    this.applySides();
+  }
+
+  /* ------------------------------------------------- chapter sides tint */
+
+  /** Colour of side `index` in the current theme. */
+  static sideColor(index: number, dark: boolean): string {
+    const pair = SIDE_COLORS[index % SIDE_COLORS.length];
+    return dark ? pair[1] : pair[0];
+  }
+
+  /**
+   * Tints territories by conflict side. Each side is a list of dataset NAME
+   * values; anything unmatched stays untinted. Pass null to clear.
+   */
+  setSides(sides: Array<{ names: string[] }> | null): void {
+    this.sides = sides;
+    if (!this.ready) {
+      this.map.once('style.load', () => this.applySides());
+      return;
+    }
+    this.applySides();
+  }
+
+  private applySides(): void {
+    if (!this.ready) return;
+    if (!this.sides || this.sides.length === 0) {
+      this.map.setFilter(SIDES_FILL_LAYER, MATCH_NOTHING);
+      this.map.setFilter(SIDES_LINE_LAYER, MATCH_NOTHING);
+      return;
+    }
+    const cases: unknown[] = ['match', ['get', 'NAME']];
+    const allNames: string[] = [];
+    this.sides.forEach((side, index) => {
+      if (side.names.length === 0) return;
+      cases.push(side.names, TerritoryMap.sideColor(index, this.dark));
+      allNames.push(...side.names);
+    });
+    cases.push('rgba(0,0,0,0)');
+    const color = cases as unknown as ExpressionSpecification;
+    const filter: ExpressionSpecification = [
+      'in',
+      ['get', 'NAME'],
+      ['literal', allNames],
+    ];
+    this.map.setFilter(SIDES_FILL_LAYER, filter);
+    this.map.setPaintProperty(SIDES_FILL_LAYER, 'fill-color', color);
+    this.map.setFilter(SIDES_LINE_LAYER, filter);
+    this.map.setPaintProperty(SIDES_LINE_LAYER, 'line-color', color);
+  }
+
+  /* ------------------------------------------------------- spotlight veil */
+
+  /**
+   * Spotlights the given feature ids: everything else fades behind a veil.
+   * The spotlit features are redrawn above it in full colour. Null clears.
+   */
+  setSpotlight(ids: number[] | null): void {
+    this.spotlightIds = ids;
+    if (!this.ready) return;
+    const active = ids !== null && ids.length > 0;
+    this.map.setPaintProperty(VEIL_LAYER, 'fill-opacity', active ? 0.6 : 0);
+    const filter: ExpressionSpecification = active
+      ? (['in', ['id'], ['literal', ids]] as unknown as ExpressionSpecification)
+      : MATCH_NOTHING;
+    this.map.setFilter(SPOT_FILL_LAYER, filter);
+    this.map.setFilter(SPOT_LINE_LAYER, filter);
+  }
+
+  hasSpotlight(): boolean {
+    return this.spotlightIds !== null && this.spotlightIds.length > 0;
+  }
+
+  /* --------------------------------------------------- modern comparison */
+
+  /** Data for the hold-to-compare overlay: the newest dataset snapshot. */
+  setModernData(collection: SnapshotCollection): void {
+    if (!this.ready) {
+      this.map.once('style.load', () => this.setModernData(collection));
+      return;
+    }
+    (this.map.getSource(MODERN_SOURCE) as GeoJSONSource).setData(collection);
+  }
+
+  setModernVisible(visible: boolean): void {
+    this.modernVisible = visible;
+    if (!this.ready) return;
+    this.map.setPaintProperty(MODERN_LAYER, 'line-opacity', visible ? 0.8 : 0);
+  }
+
+  isModernVisible(): boolean {
+    return this.modernVisible;
   }
 
   /**

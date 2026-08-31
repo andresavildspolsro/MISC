@@ -139,6 +139,11 @@ export const cs: Strings = {
   playChapter: 'Přehrát milníky',
   pauseChapter: 'Zastavit přehrávání',
   chapterOpenAria: (name, range) => `Otevřít kapitolu ${name} (${range})`,
+  chapterSidesLabel: 'Strany',
+
+  modernHold: 'Dnešek',
+  modernHoldTitle: (snapshotYear) =>
+    `Podržte pro srovnání s dnešními hranicemi (nejnovější snímek datové sady, rok ${snapshotYear})`,
 
   disclaimerTitle: 'Hranice před rokem 1648 jsou přibližné',
   disclaimerBody:

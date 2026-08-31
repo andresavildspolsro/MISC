@@ -140,6 +140,11 @@ export const es: Strings = {
   playChapter: 'Reproducir hitos',
   pauseChapter: 'Pausar reproducción',
   chapterOpenAria: (name, range) => `Abrir el capítulo ${name} (${range})`,
+  chapterSidesLabel: 'Bandos',
+
+  modernHold: 'Hoy',
+  modernHoldTitle: (snapshotYear) =>
+    `Mantén pulsado para comparar con las fronteras actuales (la instantánea más reciente, ${snapshotYear})`,
 
   disclaimerTitle: 'Las fronteras anteriores a 1648 son aproximaciones',
   disclaimerBody:

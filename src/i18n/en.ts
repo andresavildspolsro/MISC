@@ -139,6 +139,11 @@ export const en: Strings = {
   playChapter: 'Play milestones',
   pauseChapter: 'Pause playback',
   chapterOpenAria: (name, range) => `Open chapter ${name} (${range})`,
+  chapterSidesLabel: 'Sides',
+
+  modernHold: 'Today',
+  modernHoldTitle: (snapshotYear) =>
+    `Hold to compare with today’s borders (the dataset’s newest snapshot, ${snapshotYear})`,
 
   disclaimerTitle: 'Borders before 1648 are approximations',
   disclaimerBody:
