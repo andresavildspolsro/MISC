@@ -198,6 +198,13 @@ export class TerritoryMap {
           data: EMPTY,
           // Ids come from the loader, not from a property.
           generateId: false,
+          // MapLibre tiles GeoJSON through geojson-vt, which simplifies each
+          // tile at a default tolerance of 0.375. On an atlas whose subject is
+          // where the lines ran, that visibly rounds them off at world zoom.
+          // 0.15 recovers most of the detail; going all the way to 0.05 doubled
+          // worst-case hover latency on the densest snapshot for no further
+          // visible gain.
+          tolerance: 0.15,
         },
       },
       layers: [
