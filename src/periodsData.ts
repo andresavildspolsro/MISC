@@ -48,9 +48,9 @@ export const PERIODS: Period[] = [
   P('hussite-wars', 1419, 1436, 'war', [[11, 48], [19, 51.5]],
     ['Husitské války', 'Hussite Wars', 'Guerras husitas'],
     [
-      'Od první pražské defenestrace po jihlavská kompaktáta — česká reformace se ubránila pěti křížovým výpravám.',
-      'From the First Defenestration of Prague to the Compacts of Jihlava — the Bohemian reformation fought off five crusades.',
-      'De la primera defenestración de Praga a los pactos de Jihlava: la reforma bohemia resistió cinco cruzadas.',
+      'Od první pražské defenestrace po jihlavská kompaktáta — česká reformace se ubránila pěti křížovým výpravám. Datová sada v tomto snímku nekreslí samostatné Čechy, strany proto nebarvíme.',
+      'From the First Defenestration of Prague to the Compacts of Jihlava — the Bohemian reformation fought off five crusades. The dataset draws no separate Bohemia at this snapshot, so no sides are tinted.',
+      'De la primera defenestración de Praga a los pactos de Jihlava: la reforma bohemia resistió cinco cruzadas. El conjunto de datos no dibuja una Bohemia separada en esta instantánea, por lo que no se tiñen bandos.',
     ],
     ['defenestration-1419', 'vitkov-1420', 'zizka-1424', 'domazlice-1431', 'lipany-1434', 'jihlava-1436'],
     'https://en.wikipedia.org/wiki/Hussite_Wars'),
