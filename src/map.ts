@@ -749,6 +749,12 @@ export class TerritoryMap {
 
   showPopup(at: LngLatLike, content: HTMLElement): void {
     this.closePopup();
+    // A milestone can sit outside the current frame (the Dayton Agreement in a
+    // Balkans-framed chapter); an invisible popup would look like nothing
+    // happened, so the map slides over to it.
+    if (!this.map.getBounds().contains(at)) {
+      this.map.panTo(at, { duration: 600 });
+    }
     this.popup = new Popup({ closeButton: true, maxWidth: '340px', offset: 10 })
       .setLngLat(at)
       .setDOMContent(content)

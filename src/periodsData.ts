@@ -172,4 +172,294 @@ export const PERIODS: Period[] = [
       { names: ['Východní blok', 'Eastern bloc', 'Bloque oriental'],
         territories: ['USSR', 'Russia', 'Poland', 'Czechoslovakia', 'Hungary', 'Romania', 'Bulgaria', 'East Germany', 'Albania', 'Cuba'] },
     ]),
+
+  P('greco-persian', -499, -449, 'war', [[18, 33], [32, 42]],
+    ['Řecko-perské války', 'Greco-Persian Wars', 'Guerras médicas'],
+    [
+      'Od iónského povstání po Marathón, Thermopyly a Plataje — řecké obce ubránily svou svobodu proti perské říši.',
+      'From the Ionian Revolt through Marathon, Thermopylae and Plataea — the Greek cities defended their freedom against the Persian Empire.',
+      'De la revuelta jónica a Maratón, las Termópilas y Platea: las ciudades griegas defendieron su libertad frente al Imperio persa.',
+    ],
+    ['ionian-499', 'marathon', 'thermopylae', 'salamis', 'plataea-479'],
+    'https://en.wikipedia.org/wiki/Greco-Persian_Wars',
+    [
+      { names: ['Řecké obce', 'Greek cities', 'Ciudades griegas'],
+        territories: ['Greek city-states', 'Greek colonies'] },
+      { names: ['Perská říše', 'Persian Empire', 'Imperio persa'],
+        territories: ['Achaemenid Empire'] },
+    ]),
+
+  P('peloponnesian-war', -431, -404, 'war', [[18, 33], [30, 42]],
+    ['Peloponéská válka', 'Peloponnesian War', 'Guerra del Peloponeso'],
+    [
+      'Athény proti Spartě — bratrovražedná válka, která vyčerpala klasické Řecko. Datová sada kreslí řecké obce jako jeden celek, strany proto nebarvíme.',
+      'Athens against Sparta — the fratricidal war that exhausted classical Greece. The dataset draws the Greek cities as one unit, so no sides are tinted.',
+      'Atenas contra Esparta: la guerra fratricida que agotó a la Grecia clásica. El conjunto de datos dibuja las ciudades griegas como una sola unidad, por lo que no se tiñen bandos.',
+    ],
+    ['peloponnesian', 'sicily-415', 'aegospotami-405'],
+    'https://en.wikipedia.org/wiki/Peloponnesian_War'),
+
+  P('alexander', -334, -323, 'war', [[18, 22], [72, 42]],
+    ['Tažení Alexandra Velikého', 'Campaigns of Alexander the Great', 'Campañas de Alejandro Magno'],
+    [
+      'Od Gráníku po smrt v Babylonu — deset let, které spojily Řecko s Egyptem, Persií a Indií.',
+      'From the Granicus to his death in Babylon — ten years that joined Greece to Egypt, Persia and India.',
+      'Del Gránico a su muerte en Babilonia: diez años que unieron Grecia con Egipto, Persia y la India.',
+    ],
+    ['granicus', 'issus-333', 'gaugamela', 'alexander-death'],
+    'https://en.wikipedia.org/wiki/Wars_of_Alexander_the_Great',
+    [
+      { names: ['Alexandrova říše', 'Empire of Alexander', 'Imperio de Alejandro'],
+        territories: ['Empire of Alexander'] },
+    ]),
+
+  P('punic-wars', -264, -146, 'war', [[-10, 30], [25, 46]],
+    ['Punské války', 'Punic Wars', 'Guerras púnicas'],
+    [
+      'Řím proti Kartágu o vládu nad západním Středomořím — od Sicílie přes Hannibala po zničení Kartága.',
+      'Rome against Carthage for the western Mediterranean — from Sicily through Hannibal to the destruction of Carthage.',
+      'Roma contra Cartago por el Mediterráneo occidental: de Sicilia, pasando por Aníbal, hasta la destrucción de Cartago.',
+    ],
+    ['punic1', 'aegates-241', 'cannae', 'zama', 'carthage-146'],
+    'https://en.wikipedia.org/wiki/Punic_Wars',
+    [
+      { names: ['Řím', 'Rome', 'Roma'],
+        territories: ['Rome', 'Roman Republic'] },
+      { names: ['Kartágo', 'Carthage', 'Cartago'],
+        territories: ['Carthage'] },
+    ]),
+
+  P('migration-period', 375, 568, 'era', [[-10, 34], [42, 56]],
+    ['Stěhování národů', 'Migration Period', 'Período de las migraciones'],
+    [
+      'Od příchodu Hunů po vpád Langobardů — dvě staletí, která proměnila římský Západ v barbarská království.',
+      'From the coming of the Huns to the Lombard invasion — two centuries that turned the Roman West into barbarian kingdoms.',
+      'De la llegada de los hunos a la invasión lombarda: dos siglos que convirtieron el Occidente romano en reinos bárbaros.',
+    ],
+    ['huns-375', 'empire-split-395', 'rome-410', 'catalaunian', 'rome-fall-476', 'lombards-568'],
+    'https://en.wikipedia.org/wiki/Migration_Period',
+    [
+      { names: ['Římské říše', 'Roman empires', 'Imperios romanos'],
+        territories: ['Western Roman Empire', 'Eastern Roman Empire'] },
+      { names: ['Stěhující se kmeny', 'Migrating peoples', 'Pueblos migratorios'],
+        territories: ['Hunnic Empire', 'Visigoths', 'Ostrogoths', 'Franks', 'Visigothic Kingdom', 'Frankish Kingdom', 'Lombard principalities'] },
+    ]),
+
+  P('viking-age', 793, 1066, 'discovery', [[-62, 44], [30, 67]],
+    ['Vikinská expanze', 'Viking Age', 'Era vikinga'],
+    [
+      'Od Lindisfarne po Hastings — nájezdy, obchod a plavby, které dosáhly Islandu, Grónska i Ameriky.',
+      'From Lindisfarne to Hastings — raids, trade and voyages that reached Iceland, Greenland and America.',
+      'De Lindisfarne a Hastings: incursiones, comercio y travesías que alcanzaron Islandia, Groenlandia y América.',
+    ],
+    ['lindisfarne-793', 'paris-845', 'iceland-874', 'vinland-1000', 'hastings-1066'],
+    'https://en.wikipedia.org/wiki/Viking_Age',
+    [
+      { names: ['Severské domoviny', 'Norse homelands', 'Tierras nórdicas'],
+        territories: ['Kingdom of Norway', 'Norway', 'Denmark', 'Denmark-Norway', 'Sweden'] },
+    ]),
+
+  P('mongol-expansion', 1206, 1279, 'war', [[10, 15], [135, 60]],
+    ['Mongolská expanze', 'Mongol conquests', 'Conquistas mongolas'],
+    [
+      'Od Čingischánova nástupu po pád songské Číny — největší souvislá pozemní říše dějin.',
+      'From Genghis Khan\'s rise to the fall of Song China — the largest contiguous land empire in history.',
+      'Del ascenso de Gengis Kan a la caída de la China Song: el mayor imperio terrestre contiguo de la historia.',
+    ],
+    ['genghis-1206', 'kalka-1223', 'legnica-1241', 'baghdad-1258', 'yamen-1279'],
+    'https://en.wikipedia.org/wiki/Mongol_invasions_and_conquests',
+    [
+      { names: ['Mongolské říše', 'Mongol khanates', 'Kanatos mongoles'],
+        territories: ['Mongol Empire', 'Great Khanate', 'Chagatai Khanate', 'Ilkhanate', 'Khanate of the Golden Horde'] },
+    ]),
+
+  P('reconquista', 711, 1492, 'era', [[-11, 34], [6, 45]],
+    ['Reconquista', 'Reconquista', 'Reconquista'],
+    [
+      'Od vylodění muslimů v Iberii po pád Granady — osm století zápasu o Pyrenejský poloostrov.',
+      'From the Muslim landing in Iberia to the fall of Granada — eight centuries of struggle for the peninsula.',
+      'Del desembarco musulmán en Iberia a la caída de Granada: ocho siglos de lucha por la península.',
+    ],
+    ['iberia-711', 'covadonga-722', 'tours-732', 'tolosa-1212', 'granada-1492'],
+    'https://en.wikipedia.org/wiki/Reconquista',
+    [
+      { names: ['Křesťanská království', 'Christian kingdoms', 'Reinos cristianos'],
+        territories: ['Asturias', 'León', 'Castilla', 'Castile', 'Castille', 'Aragón', 'Navarre', 'Portugal'] },
+      { names: ['Muslimská Iberie', 'Muslim Iberia', 'Iberia musulmana'],
+        territories: ['Emirate of Córdoba', 'Caliphate of Córdoba', 'Almoravid dynasty', 'Almohad Caliphate', 'Granada'] },
+    ]),
+
+  P('great-northern-war', 1700, 1721, 'war', [[8, 48], [36, 70]],
+    ['Velká severní válka', 'Great Northern War', 'Gran Guerra del Norte'],
+    [
+      'Od Narvy po Nystad — Švédsko ztratilo nadvládu nad Baltem a velmocí se stalo Petrovo Rusko.',
+      'From Narva to Nystad — Sweden lost its Baltic dominance and Peter\'s Russia became a great power.',
+      'De Narva a Nystad: Suecia perdió su dominio del Báltico y la Rusia de Pedro se convirtió en gran potencia.',
+    ],
+    ['narva-1700', 'poltava-1709', 'nystad-1721'],
+    'https://en.wikipedia.org/wiki/Great_Northern_War',
+    [
+      { names: ['Švédská říše', 'Swedish Empire', 'Imperio sueco'],
+        territories: ['Sweden'] },
+      { names: ['Protišvédská koalice', 'Anti-Swedish coalition', 'Coalición antisueca'],
+        territories: ['Tsardom of Muscovy', 'Denmark-Norway', 'Polish–Lithuanian Commonwealth', 'Prussia'] },
+    ]),
+
+  P('seven-years-war', 1756, 1763, 'war', [[-82, 25], [36, 60]],
+    ['Sedmiletá válka', 'Seven Years\' War', 'Guerra de los Siete Años'],
+    [
+      'První „světová" válka — bojovalo se v Evropě, Americe i Indii; Prusko uhájilo Slezsko a Británie získala Kanadu.',
+      'The first "world" war — fought in Europe, America and India; Prussia kept Silesia and Britain gained Canada.',
+      'La primera guerra «mundial»: se combatió en Europa, América y la India; Prusia retuvo Silesia y Gran Bretaña ganó Canadá.',
+    ],
+    ['lobositz-1756', 'kolin-1757', 'quebec-1759', 'paris-1763'],
+    'https://en.wikipedia.org/wiki/Seven_Years%27_War',
+    [
+      { names: ['Prusko a Británie', 'Prussia and Britain', 'Prusia y Gran Bretaña'],
+        territories: ['Prussia', 'United Kingdom'] },
+      { names: ['Rakousko a spojenci', 'Austria and allies', 'Austria y aliados'],
+        territories: ['Austrian Empire', 'France', 'Russian Empire', 'Sweden', 'Spain'] },
+    ]),
+
+  P('american-revolution', 1773, 1783, 'revolution', [[-100, 24], [-58, 50]],
+    ['Americká revoluce', 'American Revolution', 'Revolución americana'],
+    [
+      'Od bostonského pití čaje po pařížský mír — třináct kolonií si vybojovalo nezávislost.',
+      'From the Boston Tea Party to the Peace of Paris — thirteen colonies won their independence.',
+      'Del Motín del té de Boston a la Paz de París: trece colonias conquistaron su independencia.',
+    ],
+    ['boston-1773', 'independence-1776', 'saratoga-1777', 'yorktown-1781', 'paris-1783'],
+    'https://en.wikipedia.org/wiki/American_Revolution',
+    [
+      { names: ['Spojené státy a Francie', 'United States and France', 'Estados Unidos y Francia'],
+        territories: ['United States of America', 'France'] },
+      { names: ['Británie', 'Britain', 'Gran Bretaña'],
+        territories: ['United Kingdom'] },
+    ]),
+
+  P('revolutions-1848', 1848, 1849, 'revolution', [[-5, 42], [26, 55]],
+    ['Revoluce 1848–1849', 'Revolutions of 1848', 'Revoluciones de 1848'],
+    [
+      '„Jaro národů" — od Paříže přes Prahu a Frankfurt po Világoš; revoluce byly poraženy, jejich požadavky přežily.',
+      'The "Springtime of Nations" — from Paris through Prague and Frankfurt to Világos; the revolutions were defeated, their demands survived.',
+      'La «Primavera de los Pueblos»: de París, pasando por Praga y Fráncfort, hasta Világos; las revoluciones fueron vencidas, sus demandas sobrevivieron.',
+    ],
+    ['paris-1848', 'prague-1848', 'frankfurt-1848', 'vilagos-1849'],
+    'https://en.wikipedia.org/wiki/Revolutions_of_1848'),
+
+  P('crimean-war', 1853, 1856, 'war', [[19, 39], [45, 56]],
+    ['Krymská válka', 'Crimean War', 'Guerra de Crimea'],
+    [
+      'Rusko proti Osmanům, Británii a Francii — první moderní válka s telegrafem, železnicí a válečnými zpravodaji.',
+      'Russia against the Ottomans, Britain and France — the first modern war, with telegraph, railways and war correspondents.',
+      'Rusia contra los otomanos, Gran Bretaña y Francia: la primera guerra moderna, con telégrafo, ferrocarril y corresponsales.',
+    ],
+    ['crimea-1853', 'sevastopol-1855', 'paris-1856'],
+    'https://en.wikipedia.org/wiki/Crimean_War',
+    [
+      { names: ['Rusko', 'Russia', 'Rusia'],
+        territories: ['Russian Empire'] },
+      { names: ['Spojenci', 'Allies', 'Aliados'],
+        territories: ['Ottoman Empire', 'France', 'United Kingdom of Great Britain and Ireland'] },
+    ]),
+
+  P('italy-unification', 1859, 1870, 'era', [[6, 36], [19, 47]],
+    ['Sjednocení Itálie', 'Unification of Italy', 'Unificación de Italia'],
+    [
+      'Od Solferina po dobytí Říma — risorgimento spojilo poloostrov do jednoho království.',
+      'From Solferino to the capture of Rome — the Risorgimento joined the peninsula into one kingdom.',
+      'De Solferino a la toma de Roma: el Risorgimento unió la península en un solo reino.',
+    ],
+    ['solferino-1859', 'marsala-1860', 'italy-1861', 'rome-1870'],
+    'https://en.wikipedia.org/wiki/Unification_of_Italy',
+    [
+      { names: ['Sjednocená Itálie', 'Unified Italy', 'Italia unificada'],
+        territories: ['Italy'] },
+      { names: ['Rakousko', 'Austria', 'Austria'],
+        territories: ['Austria Hungary'] },
+    ]),
+
+  P('germany-unification', 1862, 1871, 'era', [[-5, 45], [20, 57]],
+    ['Sjednocení Německa', 'Unification of Germany', 'Unificación de Alemania'],
+    [
+      'Bismarckovy tři války — s Dánskem, Rakouskem a Francií — vyvrcholily vyhlášením císařství ve Versailles.',
+      'Bismarck\'s three wars — against Denmark, Austria and France — culminated in the empire proclaimed at Versailles.',
+      'Las tres guerras de Bismarck —contra Dinamarca, Austria y Francia— culminaron con el imperio proclamado en Versalles.',
+    ],
+    ['bismarck-1862', 'duppel-1864', 'koniggratz-1866', 'sedan-1870', 'versailles-1871'],
+    'https://en.wikipedia.org/wiki/Unification_of_Germany',
+    [
+      { names: ['Prusko / Německo', 'Prussia / Germany', 'Prusia / Alemania'],
+        territories: ['Germany'] },
+      { names: ['Francie a Rakousko', 'France and Austria', 'Francia y Austria'],
+        territories: ['France', 'Austria Hungary'] },
+    ]),
+
+  P('us-civil-war', 1861, 1865, 'war', [[-107, 24], [-68, 46]],
+    ['Občanská válka v USA', 'American Civil War', 'Guerra de Secesión'],
+    [
+      'Od Fort Sumteru po Appomattox — válka o jednotu Unie a konec otroctví. Datová sada Konfederaci nekreslí, strany proto nebarvíme.',
+      'From Fort Sumter to Appomattox — the war over the Union and the end of slavery. The dataset does not draw the Confederacy, so no sides are tinted.',
+      'De Fort Sumter a Appomattox: la guerra por la Unión y el fin de la esclavitud. El conjunto de datos no dibuja la Confederación, por lo que no se tiñen bandos.',
+    ],
+    ['sumter-1861', 'gettysburg-1863', 'appomattox-1865', 'lincoln-1865'],
+    'https://en.wikipedia.org/wiki/American_Civil_War'),
+
+  P('scramble-africa', 1881, 1914, 'era', [[-20, -36], [52, 38]],
+    ['Dělení Afriky', 'Scramble for Africa', 'Reparto de África'],
+    [
+      'Od berlínské konference po rok 1914, kdy zůstaly nezávislé jen Etiopie a Libérie.',
+      'From the Berlin Conference to 1914, when only Ethiopia and Liberia remained independent.',
+      'De la Conferencia de Berlín a 1914, cuando solo Etiopía y Liberia seguían siendo independientes.',
+    ],
+    ['berlin-1885', 'adwa-1896', 'fashoda-1898', 'boer-1899'],
+    'https://en.wikipedia.org/wiki/Scramble_for_Africa',
+    [
+      { names: ['Koloniální mocnosti', 'Colonial powers', 'Potencias coloniales'],
+        territories: ['United Kingdom of Great Britain and Ireland', 'France', 'Germany', 'Kingfom of Italy', 'Italy', 'Portugal', 'Spain', 'Belgium'] },
+      { names: ['Nezávislé africké státy', 'Independent African states', 'Estados africanos independientes'],
+        territories: ['Ethiopia', 'Abyssinia', 'Liberia', 'Morocco'] },
+    ]),
+
+  P('first-republic', 1918, 1938, 'era', [[11, 47], [24, 52]],
+    ['První republika', 'First Czechoslovak Republic', 'Primera República Checoslovaca'],
+    [
+      'Od vzniku Československa po Mnichov — dvacet let demokracie mezi dvěma katastrofami.',
+      'From the founding of Czechoslovakia to Munich — twenty years of democracy between two catastrophes.',
+      'De la fundación de Checoslovaquia a Múnich: veinte años de democracia entre dos catástrofes.',
+    ],
+    ['czechoslovakia-1918', 'ustava-1920', 'crash-1929', 'masaryk-1937', 'munich-1938'],
+    'https://en.wikipedia.org/wiki/First_Czechoslovak_Republic',
+    [
+      { names: ['Československo', 'Czechoslovakia', 'Checoslovaquia'],
+        territories: ['Czechoslovakia'] },
+    ]),
+
+  P('decolonization', 1945, 1975, 'era', [[-20, -40], [112, 42]],
+    ['Dekolonizace', 'Decolonization', 'Descolonización'],
+    [
+      'Od nezávislosti Indie po rozpad portugalské říše — během třiceti let vznikly desítky nových států.',
+      'From Indian independence to the end of the Portuguese empire — dozens of new states in thirty years.',
+      'De la independencia de la India al fin del imperio portugués: decenas de nuevos estados en treinta años.',
+    ],
+    ['india-1947', 'dienbienphu-1954', 'suez-1956', 'ghana-1957', 'congo-1960', 'algeria-1962', 'angola-1975'],
+    'https://en.wikipedia.org/wiki/Decolonization',
+    [
+      { names: ['Koloniální říše', 'Colonial empires', 'Imperios coloniales'],
+        territories: ['United Kingdom', 'France', 'Portugal', 'Belgium', 'Netherlands', 'Spain'] },
+    ]),
+
+  P('yugoslav-wars', 1991, 1999, 'war', [[12, 39], [25, 47]],
+    ['Jugoslávské války', 'Yugoslav Wars', 'Guerras yugoslavas'],
+    [
+      'Od Vukovaru přes Sarajevo a Srebrenici po Kosovo — krvavý rozpad federace na nástupnické státy.',
+      'From Vukovar through Sarajevo and Srebrenica to Kosovo — the bloody breakup of the federation into successor states.',
+      'De Vukovar, pasando por Sarajevo y Srebrenica, hasta Kosovo: la sangrienta desintegración de la federación en estados sucesores.',
+    ],
+    ['yugoslavia-1991', 'sarajevo-1992', 'srebrenica-1995', 'dayton-1995', 'kosovo-1999'],
+    'https://en.wikipedia.org/wiki/Yugoslav_Wars',
+    [
+      { names: ['Nástupnické státy Jugoslávie', 'Yugoslav successor states', 'Estados sucesores de Yugoslavia'],
+        territories: ['Slovenia', 'Croatia', 'Bosnia and Herzegovina', 'Serbia', 'Montenegro', 'Macedonia'] },
+    ]),
 ];

@@ -64,7 +64,7 @@ displayed as "not in dataset" rather than filled in.
   real date is stated in the text. An entry without a source renders with an
   "unverified" warning; entries referencing years with no snapshot are called
   out on the console at start-up.
-- **Historical events layer.** ~230 dated events (`src/eventsData.ts`) drawn
+- **Historical events layer.** ~290 dated events (`src/eventsData.ts`) drawn
   from the conventional Czech upper-secondary (gymnázium/maturita) history
   canon — the national RVP G curriculum deliberately prescribes no date list,
   so the canon is a curated basis and every entry stands on its cited Wikipedia
@@ -79,8 +79,9 @@ displayed as "not in dataset" rather than filled in.
   1650 snapshot, the first after it"). Names and descriptions are translated
   into all three languages; events later than the newest snapshot are dropped
   with a console warning rather than shown on a map that predates them.
-- **Chapters.** Curated bounded periods (`src/periodsData.ts`) — the Hundred
-  Years' War, the Age of Discovery, the Cold War — opened from a strip of
+- **Chapters.** Thirty curated bounded periods (`src/periodsData.ts`) — from the
+  Greco-Persian Wars through the Reconquista and the Age of Discovery to the
+  Cold War and the Yugoslav Wars — opened from a strip of
   buttons under the map. A chapter frames the map on its theatre and swaps the
   main ordinal slider for a **milestone axis**: linear in real time from the
   chapter's first year to its last, with marks at the exact years of its
@@ -98,8 +99,10 @@ displayed as "not in dataset" rather than filled in.
   the dataset's own spellings ("Kingfom of Italy") — tinted per side with a
   colour-keyed legend in the chapter header. Matching is exact and the tint is
   drawn only on the dataset's own polygons; a participant the shown snapshot
-  does not name simply stays untinted. The Hussite Wars chapter deliberately
-  has no sides: the dataset draws no separate Bohemia at its snapshot.
+  does not name simply stays untinted. The Hussite Wars, the Peloponnesian War
+  and the American Civil War deliberately have no sides: the dataset draws no
+  separate Bohemia, no Athens and Sparta, and no Confederacy at their
+  snapshots — and each of those chapter descriptions says so.
 - **Hold-to-compare "Today" button.** Holding it overlays today's borders as
   an outline — the dataset's own newest snapshot (2010), fetched on first
   press, never a hand-drawn "modern map".
