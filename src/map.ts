@@ -169,6 +169,13 @@ export class TerritoryMap {
 
   private ready = false;
   private pendingData: SnapshotCollection | null = null;
+  /**
+   * Touch taps arrive as emulated mouse events with no matching mouseleave, so
+   * on a device without a real pointer the hover tooltip would appear on tap
+   * and then hang over the popup forever. Hover affordances are therefore
+   * limited to devices that can actually hover.
+   */
+  private readonly hoverCapable = window.matchMedia('(hover: hover)').matches;
   private hoveredId: number | null = null;
   private selectedId: number | null = null;
   private dark = false;
@@ -576,7 +583,7 @@ export class TerritoryMap {
         .map((feature) => String(feature.properties?.label ?? ''))
         .filter(Boolean)
         .join(' · ');
-      if (label) {
+      if (label && this.hoverCapable) {
         this.tooltip.textContent = label;
         this.tooltip.hidden = false;
         this.positionTooltip(event.point);
@@ -632,6 +639,7 @@ export class TerritoryMap {
   }
 
   private showTooltip(point: Point, feature: MapGeoJSONFeature): void {
+    if (!this.hoverCapable) return;
     const name = feature.properties?.NAME;
     // The tooltip shows a curated translation of well-known names; the panel's
     // dataset record underneath always carries the verbatim value.
@@ -749,6 +757,9 @@ export class TerritoryMap {
 
   showPopup(at: LngLatLike, content: HTMLElement): void {
     this.closePopup();
+    // Even with a real pointer, the tooltip of the point just clicked would
+    // sit on top of the popup that replaces it.
+    this.hideTooltip();
     // A milestone can sit outside the current frame (the Dayton Agreement in a
     // Balkans-framed chapter); an invisible popup would look like nothing
     // happened, so the map slides over to it.
