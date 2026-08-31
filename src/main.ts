@@ -146,6 +146,8 @@ class App {
   private readonly chapterAxis: ChapterAxis;
   private activePeriod: Period | null = null;
   private periodMilestones: HistEvent[] = [];
+  /** Category shown in the chapter strip; a chapter's own category on exit. */
+  private chaptersCategory: PeriodCategory = 'war';
   /** Milestones resolved once at start-up so broken references warn early. */
   private readonly milestonesByPeriod = new Map<string, HistEvent[]>();
 
@@ -244,10 +246,15 @@ class App {
       }
     });
 
-    // A deep-linked chapter takes over from the plain year once the app is up.
-    const periodParam = new URLSearchParams(window.location.search).get('period');
-    const linkedPeriod = PERIODS.find((period) => period.id === periodParam);
-    if (linkedPeriod) this.enterChapter(linkedPeriod);
+    // A deep-linked chapter takes over from the plain year once the app is
+    // up; `&m=<event id>` lands on that milestone instead of the first.
+    const params = new URLSearchParams(window.location.search);
+    const linkedPeriod = PERIODS.find((period) => period.id === params.get('period'));
+    if (linkedPeriod) {
+      const milestones = this.milestonesByPeriod.get(linkedPeriod.id) ?? [];
+      const milestoneIndex = milestones.findIndex((event) => event.id === params.get('m'));
+      this.enterChapter(linkedPeriod, Math.max(0, milestoneIndex));
+    }
   }
 
   /* ------------------------------------------------------------- chrome */
@@ -540,42 +547,56 @@ class App {
 
   /* ----------------------------------------------------------- chapters */
 
-  /** Renders the chapter chips, grouped by category. */
+  /**
+   * Renders the chapter strip: category tabs, then the active category's
+   * chips. Thirty chapters in one flat row would mean a lot of sideways
+   * scrolling, especially on a phone; one category at a time keeps it short.
+   */
   private renderChaptersStrip(): void {
+    const tabsNode = requireElement('#chapters-tabs');
+    tabsNode.innerHTML = '';
     this.chaptersStripNode.innerHTML = '';
+
     const categories: Array<{ key: PeriodCategory; label: string }> = [
       { key: 'war', label: strings.chapterCategoryWar },
       { key: 'discovery', label: strings.chapterCategoryDiscovery },
       { key: 'revolution', label: strings.chapterCategoryRevolution },
       { key: 'era', label: strings.chapterCategoryEra },
     ];
+
     for (const category of categories) {
       const periods = PERIODS.filter((period) => period.category === category.key);
       if (periods.length === 0) continue;
 
-      const group = document.createElement('div');
-      group.className = 'chapters__group';
-      const label = document.createElement('span');
-      label.className = 'chapters__cat';
-      label.textContent = category.label;
-      group.append(label);
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'chapters__tab';
+      tab.setAttribute('role', 'tab');
+      const active = category.key === this.chaptersCategory;
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      tab.classList.toggle('chapters__tab--active', active);
+      tab.textContent = `${category.label} (${periods.length})`;
+      tab.addEventListener('click', () => {
+        this.chaptersCategory = category.key;
+        this.renderChaptersStrip();
+      });
+      tabsNode.append(tab);
+    }
 
-      for (const period of periods) {
-        const range = this.periodRange(period);
-        const chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'chapters__chip';
-        chip.setAttribute('aria-label', strings.chapterOpenAria(period.name[localeCode], range));
-        const name = document.createElement('span');
-        name.textContent = period.name[localeCode];
-        const years = document.createElement('span');
-        years.className = 'chapters__chip-range';
-        years.textContent = range;
-        chip.append(name, years);
-        chip.addEventListener('click', () => this.enterChapter(period));
-        group.append(chip);
-      }
-      this.chaptersStripNode.append(group);
+    for (const period of PERIODS.filter((p) => p.category === this.chaptersCategory)) {
+      const range = this.periodRange(period);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chapters__chip';
+      chip.setAttribute('aria-label', strings.chapterOpenAria(period.name[localeCode], range));
+      const name = document.createElement('span');
+      name.textContent = period.name[localeCode];
+      const years = document.createElement('span');
+      years.className = 'chapters__chip-range';
+      years.textContent = range;
+      chip.append(name, years);
+      chip.addEventListener('click', () => this.enterChapter(period));
+      this.chaptersStripNode.append(chip);
     }
   }
 
@@ -583,7 +604,7 @@ class App {
     return `${formatYearShort(period.start)}–${formatYearShort(period.end)}`;
   }
 
-  private enterChapter(period: Period): void {
+  private enterChapter(period: Period, milestoneIndex = 0): void {
     const milestones = this.milestonesByPeriod.get(period.id) ?? [];
     if (milestones.length === 0) {
       console.warn(`chapter "${period.id}" has no usable milestones; not opening`);
@@ -593,6 +614,7 @@ class App {
     this.clearSelection();
     this.activePeriod = period;
     this.periodMilestones = milestones;
+    this.chaptersCategory = period.category;
 
     this.chaptersNode.hidden = true;
     this.timelineNode.hidden = true;
@@ -609,7 +631,7 @@ class App {
     url.searchParams.set('period', period.id);
     window.history.replaceState(null, '', url);
 
-    this.openMilestone(0);
+    this.openMilestone(milestoneIndex);
   }
 
   private exitChapter(): void {
@@ -625,8 +647,10 @@ class App {
 
     const url = new URL(window.location.href);
     url.searchParams.delete('period');
+    url.searchParams.delete('m');
     window.history.replaceState(null, '', url);
 
+    this.renderChaptersStrip();
     this.map.closePopup();
     this.refreshEvents();
     this.map.resetWorldView();
@@ -712,6 +736,11 @@ class App {
     const event = this.periodMilestones[index];
     if (!event) return;
     this.chapterAxis.syncIndex(index);
+
+    // Keep the milestone in the URL so this exact spot can be shared.
+    const url = new URL(window.location.href);
+    url.searchParams.set('m', event.id);
+    window.history.replaceState(null, '', url);
 
     const snapshotIndex = this.snapshots.findIndex((snapshot) => snapshot.year >= event.year);
     if (snapshotIndex === -1) return;

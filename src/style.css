@@ -954,13 +954,12 @@ a:hover {
 .chapters {
   flex-shrink: 0;
   display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
   padding: 0.5rem 1rem;
   border-top: 1px solid var(--border);
   background: var(--surface);
-  overflow-x: auto;
-  scrollbar-width: thin;
 }
 
 .chapters__heading {
@@ -973,27 +972,44 @@ a:hover {
   color: var(--text-muted);
 }
 
+.chapters__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.chapters__tab {
+  padding: 0.22rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chapters__tab:hover {
+  color: var(--text-primary);
+}
+
+.chapters__tab--active {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 .chapters__strip {
   display: flex;
+  flex: 1;
+  min-width: 0;
   align-items: baseline;
   gap: 0.4rem;
-}
-
-.chapters__group {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-}
-
-.chapters__group + .chapters__group {
-  margin-left: 0.75rem;
-}
-
-.chapters__cat {
-  flex-shrink: 0;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .chapters__chip {

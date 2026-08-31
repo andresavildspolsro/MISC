@@ -92,7 +92,11 @@ displayed as "not in dataset" rather than filled in.
   the chapter header carries a permanent "Borders: <year> snapshot" badge, an
   explicit warning when no snapshot falls inside the range, and a "state
   before the period" button that jumps to the last snapshot preceding it.
-  Deep-linkable as `?period=<id>`; milestone references are validated at
+  Deep-linkable as `?period=<id>` — and `&m=<event id>` lands on that exact
+  milestone, which the URL tracks as you step, so any point of a chapter can
+  be shared. The strip groups chapters under category tabs (wars, discovery,
+  revolutions, eras) so thirty of them stay browsable on a phone. Milestone
+  references are validated at
   start-up and broken or out-of-range ones are dropped with a console warning.
 - **Conflict sides.** A chapter may declare sides (`sides` in
   `src/periodsData.ts`): lists of dataset NAME values — verbatim, including
