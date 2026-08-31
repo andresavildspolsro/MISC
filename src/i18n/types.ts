@@ -112,6 +112,13 @@ export interface Strings {
   factsNoneForYear: string;
   factsUntranslated: string;
 
+  /** The events layer: curriculum events as clickable map points. */
+  eventsToggle: string;
+  eventsDisclaimer: string;
+  /** Notice after jumping to an event's year: borders come from a snapshot. */
+  eventYearShown: (eventYear: string, snapshotYear: string) => string;
+  eventMarkerTitle: (year: string, names: string) => string;
+
   disclaimerTitle: string;
   disclaimerBody: string;
   disclaimerDismiss: string;

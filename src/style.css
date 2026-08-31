@@ -21,6 +21,7 @@
   --warn-text: #5a3c05;
   --error-text: #9a2b1f;
   --shadow: 0 2px 12px rgb(20 20 15 / 12%);
+  --event-dot: #b3261e;
 
   --topbar-height: 3.75rem;
   --timeline-height: 8.5rem;
@@ -42,6 +43,7 @@
     --warn-text: #f0dcae;
     --error-text: #f0968a;
     --shadow: 0 2px 14px rgb(0 0 0 / 45%);
+    --event-dot: #ff7a70;
   }
 }
 
@@ -743,6 +745,108 @@ a:hover {
 
 .timeline__help span + span {
   margin-left: 0.4rem;
+}
+
+/* -------------------------------------------------- event marks and popup */
+
+.timeline__eventmarks {
+  position: relative;
+  height: 8px;
+  margin-top: 2px;
+}
+
+.evmark {
+  position: absolute;
+  top: 0;
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transform: translateX(-50%);
+}
+
+.evmark::before {
+  display: block;
+  width: 5px;
+  height: 5px;
+  margin: 2px auto 0;
+  border-radius: 50%;
+  background: var(--event-dot);
+  content: '';
+}
+
+.evmark:hover::before,
+.evmark:focus-visible::before {
+  width: 8px;
+  height: 8px;
+  margin-top: 0;
+}
+
+.evmark:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.maplibregl-popup-content {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.maplibregl-popup-close-button {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: var(--surface-raised) !important;
+  border-bottom-color: var(--surface-raised) !important;
+}
+
+.evpop {
+  max-width: 300px;
+}
+
+.evpop__disclaimer {
+  margin: 0 0 0.4rem;
+  color: var(--warn-text);
+  font-size: 0.68rem;
+}
+
+.evpop__item {
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.evpop__head {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.evpop__year {
+  margin-right: 0.3rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.evpop__text {
+  margin: 0 0 0.2rem;
+  font-size: 0.8rem;
+}
+
+.evpop__source {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
 }
 
 /* ------------------------------------------------------------------ footer */

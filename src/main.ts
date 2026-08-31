@@ -10,6 +10,8 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 setWorkerUrl(maplibreWorkerUrl);
 
 import { loadManifest, loadSnapshot, prefetchSnapshot } from './data';
+import { assignEventsToSnapshots, type HistEvent } from './events';
+import { EVENTS } from './eventsData';
 import { FACTS, factsForYear } from './facts';
 import { FactsCard } from './factsCard';
 import { formatCount, formatYear } from './format';
@@ -43,6 +45,7 @@ const BASEMAP_AUTO_HIDE_BEFORE = 1000;
 
 const DISCLAIMER_DISMISSED_KEY = 'historical-map:disclaimer-dismissed';
 const FACTS_OPEN_KEY = 'historical-map:facts-open';
+const EVENTS_OPEN_KEY = 'historical-map:events-open';
 
 /**
  * Grace period before a hover preview closes after the pointer leaves the map.
@@ -125,6 +128,12 @@ class App {
   private readonly factsToggle = requireElement<HTMLButtonElement>('#facts-toggle');
   private readonly factsCard = new FactsCard(requireElement('#facts'));
   private factsOpen = false;
+  private readonly eventsToggle = requireElement<HTMLButtonElement>('#events-toggle');
+  /** Events keyed by the snapshot year they belong to (first at/after). */
+  private eventsBySnapshot = new Map<number, HistEvent[]>();
+  private eventsById = new Map<string, HistEvent>();
+  /** The layer defaults to on — the points are the reason the map is fun. */
+  private eventsOpen = true;
 
   private collection: SnapshotCollection | null = null;
   private currentIndex = 0;
@@ -154,6 +163,7 @@ class App {
       {
         onSelect: (index) => this.handleSelect(index),
         onHover: (index) => this.handleHover(index),
+        onEventsClick: (ids, at) => this.handleEventsClick(ids, at),
       },
       // A stale cached manifest may predate the vendored basemap. The map
       // must come up without it rather than dying in the constructor.
@@ -165,8 +175,15 @@ class App {
     const requested = indexFromLocation(this.snapshots);
     const initialIndex = requested.index ?? this.snapshots.length - 1;
 
+    this.eventsBySnapshot = assignEventsToSnapshots(
+      EVENTS,
+      this.snapshots.map((snapshot) => snapshot.year),
+    );
+    for (const event of EVENTS) this.eventsById.set(event.id, event);
+
     this.timeline = new Timeline(requireElement('#timeline'), this.snapshots, {
       onChange: (index) => void this.goTo(index),
+      onEventYear: (year) => this.handleEventYear(year),
       onNearestJump: (requestedYear, landedIndex) => {
         const message = strings.nearestSnapshotShown(
           formatYear(requestedYear),
@@ -262,6 +279,26 @@ class App {
       });
     }
 
+    if (EVENTS.length > 0) {
+      this.eventsToggle.hidden = false;
+      try {
+        const stored = window.localStorage.getItem(EVENTS_OPEN_KEY);
+        if (stored !== null) this.eventsOpen = stored === '1';
+      } catch {
+        /* default stays on */
+      }
+      this.eventsToggle.addEventListener('click', () => {
+        this.eventsOpen = !this.eventsOpen;
+        try {
+          window.localStorage.setItem(EVENTS_OPEN_KEY, this.eventsOpen ? '1' : '0');
+        } catch {
+          /* fine */
+        }
+        this.refreshEvents();
+      });
+      this.publishEventMarks();
+    }
+
     const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
     darkQuery.addEventListener('change', (event) => this.map.setDark(event.matches));
 
@@ -299,7 +336,10 @@ class App {
     this.timeline.retranslate();
     this.panel.retranslate();
     this.map.retranslate();
+    this.map.closePopup();
     this.refreshFacts();
+    this.refreshEvents();
+    this.publishEventMarks();
 
     const snapshot = this.snapshots[this.currentIndex];
     this.setBasemap(this.map.isBasemapVisible());
@@ -322,6 +362,113 @@ class App {
       this.panel.show(feature, snapshot, this.pinnedFeatureIndex !== null ? 'pinned' : 'preview');
     } else {
       this.panel.showEmpty();
+    }
+  }
+
+  /** Marks on the timeline: one per distinct event year, localized names. */
+  private publishEventMarks(): void {
+    const byYear = new Map<number, string[]>();
+    for (const event of EVENTS) {
+      const names = byYear.get(event.year) ?? [];
+      names.push(event.name[localeCode]);
+      byYear.set(event.year, names);
+    }
+    this.timeline.setEventYears(
+      [...byYear.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([year, names]) => ({ year, names })),
+    );
+  }
+
+  /** Updates the events toggle and pushes the current snapshot's points. */
+  private refreshEvents(): void {
+    if (EVENTS.length === 0) return;
+    const year = this.snapshots[this.currentIndex].year;
+    const events = this.eventsBySnapshot.get(year) ?? [];
+    this.eventsToggle.textContent = `${strings.eventsToggle} (${events.length})`;
+    this.eventsToggle.setAttribute('aria-pressed', this.eventsOpen ? 'true' : 'false');
+
+    if (!this.eventsOpen || events.length === 0) {
+      this.map.clearEventsData();
+      return;
+    }
+    this.map.setEventsData({
+      type: 'FeatureCollection',
+      features: events.map((event) => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [event.lon, event.lat] },
+        properties: {
+          id: event.id,
+          label: `${formatYear(event.year)} — ${event.name[localeCode]}`,
+        },
+      })),
+    });
+  }
+
+  /** Popup listing every event under the tap, each with its year and source. */
+  private handleEventsClick(ids: string[], at: unknown): void {
+    const events = ids
+      .map((id) => this.eventsById.get(id))
+      .filter((event): event is HistEvent => Boolean(event));
+    if (events.length === 0) return;
+
+    const root = document.createElement('div');
+    root.className = 'evpop';
+    const disclaimer = document.createElement('p');
+    disclaimer.className = 'evpop__disclaimer';
+    disclaimer.textContent = strings.eventsDisclaimer;
+    root.append(disclaimer);
+
+    for (const event of events) {
+      const item = document.createElement('div');
+      item.className = 'evpop__item';
+      const head = document.createElement('p');
+      head.className = 'evpop__head';
+      const yearNode = document.createElement('span');
+      yearNode.className = 'evpop__year';
+      yearNode.textContent = formatYear(event.year);
+      head.append(yearNode, document.createTextNode(` ${event.name[localeCode]}`));
+      const body = document.createElement('p');
+      body.className = 'evpop__text';
+      body.textContent = event.description[localeCode];
+      const src = document.createElement('p');
+      src.className = 'evpop__source';
+      const link = document.createElement('a');
+      link.href = event.source.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = event.source.label;
+      src.append(document.createTextNode(`${strings.factsSource}: `), link);
+      item.append(head, body, src);
+      root.append(item);
+    }
+    this.map.showPopup(at as [number, number], root);
+  }
+
+  /** A timeline anchor mark: jump to the first snapshot after the event. */
+  private handleEventYear(year: number): void {
+    const index = this.snapshots.findIndex((snapshot) => snapshot.year >= year);
+    if (index === -1) return;
+
+    if (!this.eventsOpen) {
+      this.eventsOpen = true;
+      try {
+        window.localStorage.setItem(EVENTS_OPEN_KEY, '1');
+      } catch {
+        /* fine */
+      }
+    }
+
+    const message =
+      this.snapshots[index].year === year
+        ? null
+        : strings.eventYearShown(formatYear(year), formatYear(this.snapshots[index].year));
+    if (index === this.currentIndex) {
+      if (message) this.showTransient(message);
+      this.refreshEvents();
+    } else {
+      if (message) this.pendingNotice = message;
+      this.timeline.setIndex(index);
     }
   }
 
@@ -382,9 +529,11 @@ class App {
     const token = ++this.loadToken;
 
     this.clearSelection();
+    this.map.closePopup();
     this.updateDisclaimer(snapshot.year);
     this.updateBasemapDefault(snapshot.year);
     this.refreshFacts();
+    this.refreshEvents();
 
     const url = new URL(window.location.href);
     url.searchParams.set('year', String(snapshot.year));

@@ -22,6 +22,8 @@ const PLAY_INTERVAL_MS = 1600;
 
 export interface TimelineCallbacks {
   onChange: (index: number) => void;
+  /** Click on an event-year anchor mark under the slider. */
+  onEventYear: (year: number) => void;
   /**
    * A typed year that is not a dataset year lands on the nearest snapshot.
    * This reports the substitution so the app can say it out loud — silent
@@ -44,6 +46,8 @@ export class Timeline {
   private readonly jumpOptions: HTMLDataListElement;
   private readonly positionNode: HTMLElement;
   private readonly ticksNode: HTMLElement;
+  private readonly eventMarksNode: HTMLElement;
+  private eventYears: Array<{ year: number; names: string[] }> = [];
 
   private index = 0;
   private playTimer: number | null = null;
@@ -66,6 +70,7 @@ export class Timeline {
     this.jumpOptions = root.querySelector<HTMLDataListElement>('#year-jump-options')!;
     this.positionNode = root.querySelector<HTMLElement>('#timeline-position')!;
     this.ticksNode = root.querySelector<HTMLElement>('#timeline-ticks')!;
+    this.eventMarksNode = root.querySelector<HTMLElement>('#timeline-eventmarks')!;
 
     this.slider.min = '0';
     this.slider.max = String(snapshots.length - 1);
@@ -200,6 +205,7 @@ export class Timeline {
   retranslate(): void {
     this.applyLabels();
     this.relabelTicks();
+    this.renderEventMarks();
     this.render();
   }
 
@@ -226,6 +232,58 @@ export class Timeline {
   private positionOf(index: number): number {
     const total = this.snapshots.length;
     return total === 1 ? 0 : (index / (total - 1)) * 100;
+  }
+
+  /**
+   * Position of an arbitrary year on the ordinal axis: linear interpolation
+   * inside the segment between the two snapshots that bracket it. This places
+   * a mark, not a border claim — 1618 lands between the 1600 and 1650 stops.
+   */
+  private positionOfYear(year: number): number {
+    const total = this.snapshots.length;
+    if (total === 1) return 0;
+    if (year <= this.snapshots[0].year) return 0;
+    const last = this.snapshots[total - 1].year;
+    if (year >= last) return 100;
+    for (let i = 0; i < total - 1; i += 1) {
+      const a = this.snapshots[i].year;
+      const b = this.snapshots[i + 1].year;
+      if (year >= a && year <= b) {
+        const inner = b === a ? 0 : (year - a) / (b - a);
+        return ((i + inner) / (total - 1)) * 100;
+      }
+    }
+    return 100;
+  }
+
+  /**
+   * Anchor marks for event years. Every mark is a real, dated event from the
+   * events layer; clicking one navigates to the first snapshot after it.
+   */
+  setEventYears(eventYears: Array<{ year: number; names: string[] }>): void {
+    this.eventYears = eventYears;
+    this.renderEventMarks();
+  }
+
+  private renderEventMarks(): void {
+    this.eventMarksNode.innerHTML = '';
+    for (const entry of this.eventYears) {
+      const mark = document.createElement('button');
+      mark.type = 'button';
+      mark.className = 'evmark';
+      mark.style.left = `${this.positionOfYear(entry.year)}%`;
+      const label = strings.eventMarkerTitle(
+        formatYear(entry.year),
+        entry.names.join(' · ').slice(0, 120),
+      );
+      mark.title = label;
+      mark.setAttribute('aria-label', label);
+      mark.addEventListener('click', () => {
+        this.stop();
+        this.callbacks.onEventYear(entry.year);
+      });
+      this.eventMarksNode.append(mark);
+    }
   }
 
   /**

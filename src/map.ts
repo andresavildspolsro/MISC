@@ -1,8 +1,10 @@
 import {
   AttributionControl,
   GeoJSONSource,
+  type LngLatLike,
   Map as MapLibreMap,
   NavigationControl,
+  Popup,
   type ExpressionSpecification,
   type LngLatBoundsLike,
   type MapGeoJSONFeature,
@@ -32,6 +34,8 @@ const COAST_LAYER = 'basemap-coast';
 const LAND_SOURCE = 'basemap-land-source';
 const LAKES_SOURCE = 'basemap-lakes-source';
 const BASEMAP_LAYERS = [LAND_LAYER, LAKES_LAYER, COAST_LAYER];
+const EVENTS_SOURCE = 'events-source';
+const EVENTS_LAYER = 'events-points';
 const BACKGROUND_LAYER = 'background';
 
 /**
@@ -74,6 +78,19 @@ export interface BasemapSources {
 const EMPTY: SnapshotCollection = { type: 'FeatureCollection', features: [] };
 
 /**
+ * One browser click can fire several MapLibre layer listeners. The event-point
+ * listeners run first and stamp the underlying DOM event; territory listeners
+ * then stand down.
+ */
+const CONSUMED = Symbol('event-point-consumed');
+function markConsumed(event: MapLayerMouseEvent | MapMouseEvent): void {
+  (event.originalEvent as unknown as Record<symbol, boolean>)[CONSUMED] = true;
+}
+function isConsumed(event: MapLayerMouseEvent | MapMouseEvent): boolean {
+  return Boolean((event.originalEvent as unknown as Record<symbol, boolean>)[CONSUMED]);
+}
+
+/**
  * On-map credit for the coastlines. A proper noun, deliberately not localized:
  * the attribution control is built once and would otherwise go stale when the
  * language changes. The full localized sentence lives in the footer.
@@ -89,6 +106,8 @@ export interface MapCallbacks {
    * included.
    */
   onSelect: (featureIndex: number | null) => void;
+  /** Click on one or more event points (ids in popup order). */
+  onEventsClick: (eventIds: string[], at: LngLatLike) => void;
   /**
    * Fires when the pointer crosses into a different territory, and with `null`
    * when it leaves the map. Indices mean the same thing as in `onSelect`.
@@ -110,6 +129,7 @@ export class TerritoryMap {
   private selectedId: number | null = null;
   private dark = false;
   private basemapVisible = true;
+  private popup: Popup | null = null;
   private readonly basemap: BasemapSources | null;
   /** Set once the finer coastline has been requested, so it is fetched once. */
   private detailRequested = false;
@@ -152,8 +172,13 @@ export class TerritoryMap {
         'NavigationControl.ZoomIn': strings.zoomIn,
         'NavigationControl.ZoomOut': strings.zoomOut,
         'AttributionControl.ToggleAttribution': strings.toggleAttribution,
+        'Popup.Close': strings.panelClose,
       },
     });
+
+    // Read-only debug handle for automated browser verification (Playwright
+    // scripts call queryRenderedFeatures through it). Not part of the app API.
+    (window as unknown as { __map?: MapLibreMap }).__map = this.map;
 
     this.map.touchZoomRotate.disableRotation();
     this.map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
@@ -210,6 +235,7 @@ export class TerritoryMap {
           attribution: BASEMAP_CREDIT,
         },
         [LAKES_SOURCE]: { type: 'geojson', data: EMPTY },
+        [EVENTS_SOURCE]: { type: 'geojson', data: EMPTY },
         [SOURCE_ID]: {
           type: 'geojson',
           data: EMPTY,
@@ -341,6 +367,19 @@ export class TerritoryMap {
             'line-opacity': 1,
           },
         },
+        {
+          // Curriculum events as tappable points, above every border layer.
+          id: EVENTS_LAYER,
+          type: 'circle',
+          source: EVENTS_SOURCE,
+          paint: {
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 1, 4, 4, 6, 8, 9],
+            'circle-color': this.dark ? '#ff7a70' : '#b3261e',
+            'circle-stroke-color': this.dark ? '#1a1a19' : '#ffffff',
+            'circle-stroke-width': 1.5,
+            'circle-opacity': 0.95,
+          },
+        },
       ],
     };
   }
@@ -411,7 +450,41 @@ export class TerritoryMap {
   /* ----------------------------------------------------------- interaction */
 
   private bindInteractions(): void {
+    // Event-point handlers are registered before the territory handlers on
+    // purpose: MapLibre fires layer listeners in registration order, and a tap
+    // on a point must not also select the territory underneath it.
+    this.map.on('mousemove', EVENTS_LAYER, (event: MapLayerMouseEvent) => {
+      if (!event.features?.length) return;
+      markConsumed(event);
+      this.map.getCanvas().style.cursor = 'pointer';
+      this.setHovered(null);
+      const label = event.features
+        .map((feature) => String(feature.properties?.label ?? ''))
+        .filter(Boolean)
+        .join(' · ');
+      if (label) {
+        this.tooltip.textContent = label;
+        this.tooltip.hidden = false;
+        this.positionTooltip(event.point);
+      }
+    });
+
+    this.map.on('click', EVENTS_LAYER, (event: MapLayerMouseEvent) => {
+      if (!event.features?.length) return;
+      markConsumed(event);
+      const ids = event.features
+        .map((feature) => String(feature.properties?.id ?? ''))
+        .filter(Boolean);
+      const geometry = event.features[0].geometry;
+      const at: LngLatLike =
+        geometry.type === 'Point'
+          ? (geometry.coordinates as [number, number])
+          : event.lngLat;
+      this.callbacks.onEventsClick(ids, at);
+    });
+
     this.map.on('mousemove', FILL_LAYER, (event: MapLayerMouseEvent) => {
+      if (isConsumed(event)) return;
       const feature = event.features?.[0];
       if (!feature) return;
       this.map.getCanvas().style.cursor = 'pointer';
@@ -426,6 +499,7 @@ export class TerritoryMap {
     });
 
     this.map.on('click', FILL_LAYER, (event: MapLayerMouseEvent) => {
+      if (isConsumed(event)) return;
       const feature = event.features?.[0];
       if (!feature || typeof feature.id !== 'number') return;
       this.select(feature.id);
@@ -434,6 +508,7 @@ export class TerritoryMap {
 
     // A click on empty ocean clears the selection.
     this.map.on('click', (event: MapMouseEvent) => {
+      if (isConsumed(event)) return;
       const hits = this.map.queryRenderedFeatures(event.point, { layers: [FILL_LAYER] });
       if (hits.length === 0) {
         this.select(null);
@@ -453,8 +528,11 @@ export class TerritoryMap {
 
     this.tooltip.textContent = label;
     this.tooltip.hidden = false;
+    this.positionTooltip(point);
+  }
 
-    // Keep the tooltip inside the viewport near the right and bottom edges.
+  /** Keeps the tooltip inside the viewport near the right and bottom edges. */
+  private positionTooltip(point: Point): void {
     const { width, height } = this.tooltip.getBoundingClientRect();
     const canvas = this.map.getCanvas();
     const x = Math.min(point.x + 14, canvas.clientWidth - width - 8);
@@ -543,6 +621,31 @@ export class TerritoryMap {
     this.setData({ type: 'FeatureCollection', features: [] });
   }
 
+  setEventsData(collection: GeoJSON.FeatureCollection): void {
+    if (!this.ready) {
+      this.map.once('style.load', () => this.setEventsData(collection));
+      return;
+    }
+    (this.map.getSource(EVENTS_SOURCE) as GeoJSONSource | undefined)?.setData(collection);
+  }
+
+  clearEventsData(): void {
+    this.setEventsData({ type: 'FeatureCollection', features: [] });
+  }
+
+  showPopup(at: LngLatLike, content: HTMLElement): void {
+    this.closePopup();
+    this.popup = new Popup({ closeButton: true, maxWidth: '340px', offset: 10 })
+      .setLngLat(at)
+      .setDOMContent(content)
+      .addTo(this.map);
+  }
+
+  closePopup(): void {
+    this.popup?.remove();
+    this.popup = null;
+  }
+
   setBasemapVisible(visible: boolean): void {
     this.basemapVisible = visible;
     if (!this.ready) {
@@ -575,6 +678,8 @@ export class TerritoryMap {
     this.map.setPaintProperty(HOVER_HALO_LAYER, 'line-color', this.glowColor());
     this.map.setPaintProperty(HOVER_LAYER, 'line-color', dark ? '#ffffff' : '#1a1a19');
     this.map.setPaintProperty(SELECTED_LAYER, 'line-color', dark ? '#ffd54a' : '#8a4b00');
+    this.map.setPaintProperty(EVENTS_LAYER, 'circle-color', dark ? '#ff7a70' : '#b3261e');
+    this.map.setPaintProperty(EVENTS_LAYER, 'circle-stroke-color', dark ? '#1a1a19' : '#ffffff');
   }
 
   /**

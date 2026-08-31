@@ -114,6 +114,13 @@ export const en: Strings = {
   factsNoneForYear: 'No facts for this snapshot yet.',
   factsUntranslated: 'Not available in this language; shown in its original language.',
 
+  eventsToggle: 'Events',
+  eventsDisclaimer:
+    'Added layer of curriculum events — not part of the border dataset; point locations are approximate.',
+  eventYearShown: (eventYear, snapshotYear) =>
+    `Event of ${eventYear} — borders shown from the ${snapshotYear} snapshot, the first one after it.`,
+  eventMarkerTitle: (year, names) => `${year}: ${names}`,
+
   disclaimerTitle: 'Borders before 1648 are approximations',
   disclaimerBody:
     'The dataset authors note that in Europe the concept of a fixed national boundary only becomes meaningful after the Peace of Westphalia (1648). Earlier polities had overlapping, gradual and often undefined frontiers. Treat every line on this map as a scholarly approximation, not a surveyed border.',

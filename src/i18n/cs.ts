@@ -114,6 +114,13 @@ export const cs: Strings = {
   factsNoneForYear: 'K tomuto snímku zatím žádné zajímavosti nejsou.',
   factsUntranslated: 'V tomto jazyce není k dispozici; zobrazeno v původním znění.',
 
+  eventsToggle: 'Události',
+  eventsDisclaimer:
+    'Doplněná vrstva událostí podle středoškolského učiva — není součástí datové sady hranic; polohy bodů jsou přibližné.',
+  eventYearShown: (eventYear, snapshotYear) =>
+    `Událost roku ${eventYear} — hranice jsou ze snímku ${snapshotYear}, prvního po ní.`,
+  eventMarkerTitle: (year, names) => `${year}: ${names}`,
+
   disclaimerTitle: 'Hranice před rokem 1648 jsou přibližné',
   disclaimerBody:
     'Autoři datové sady upozorňují, že v Evropě dává pojem pevné státní hranice smysl až po vestfálském míru (1648). Dřívější útvary měly překrývající se, pozvolné a často nevymezené hranice. Každou čáru na této mapě berte jako odborný odhad, nikoli jako zaměřenou hranici.',

@@ -64,6 +64,21 @@ displayed as "not in dataset" rather than filled in.
   real date is stated in the text. An entry without a source renders with an
   "unverified" warning; entries referencing years with no snapshot are called
   out on the console at start-up.
+- **Historical events layer.** ~230 dated events (`src/eventsData.ts`) drawn
+  from the conventional Czech upper-secondary (gymnázium/maturita) history
+  canon — the national RVP G curriculum deliberately prescribes no date list,
+  so the canon is a curated basis and every entry stands on its cited Wikipedia
+  reference, not on the curriculum's authority. Events render as clickable
+  points on the map (behind a toggle, with a permanent "added layer — not part
+  of the border dataset; point locations are approximate" disclaimer in every
+  popup) and as anchor marks on the timeline at their **exact** years, so the
+  axis shows 1620, 1848 or 1989 — not just the snapshot decades. The same
+  anti-anachronism rule as the facts applies: an event appears only on the
+  first snapshot at or after its year, and jumping to an event's year states
+  which snapshot the borders come from ("Event of 1620 — borders are from the
+  1650 snapshot, the first after it"). Names and descriptions are translated
+  into all three languages; events later than the newest snapshot are dropped
+  with a console warning rather than shown on a map that predates them.
 
 ## Licensing
 

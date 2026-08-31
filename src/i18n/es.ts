@@ -115,6 +115,13 @@ export const es: Strings = {
   factsNoneForYear: 'Aún no hay curiosidades para esta instantánea.',
   factsUntranslated: 'No disponible en este idioma; se muestra en su idioma original.',
 
+  eventsToggle: 'Acontecimientos',
+  eventsDisclaimer:
+    'Capa añadida de acontecimientos del temario escolar — no forma parte del conjunto de datos de fronteras; las ubicaciones son aproximadas.',
+  eventYearShown: (eventYear, snapshotYear) =>
+    `Acontecimiento de ${eventYear}: las fronteras proceden de la instantánea de ${snapshotYear}, la primera posterior.`,
+  eventMarkerTitle: (year, names) => `${year}: ${names}`,
+
   disclaimerTitle: 'Las fronteras anteriores a 1648 son aproximaciones',
   disclaimerBody:
     'Los autores del conjunto de datos señalan que en Europa el concepto de frontera nacional fija solo cobra sentido después de la Paz de Westfalia (1648). Las entidades políticas anteriores tenían fronteras superpuestas, graduales y a menudo indefinidas. Considera cada línea de este mapa una aproximación académica, no una frontera medida.',
