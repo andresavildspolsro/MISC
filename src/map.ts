@@ -39,8 +39,6 @@ const EVENTS_LAYER = 'events-points';
 const BACKGROUND_LAYER = 'background';
 const SIDES_FILL_LAYER = 'sides-fill';
 const SIDES_LINE_LAYER = 'sides-line';
-const VEIL_SOURCE = 'veil-source';
-const VEIL_LAYER = 'veil';
 const SPOT_FILL_LAYER = 'spotlight-fill';
 const SPOT_LINE_LAYER = 'spotlight-line';
 const MODERN_SOURCE = 'modern-source';
@@ -56,26 +54,6 @@ const SIDE_COLORS: Array<[string, string]> = [
   ['#c22f21', '#ff8a7a'],
   ['#6d28b8', '#c99cff'],
 ];
-
-/**
- * A whole-world rectangle for the spotlight veil. Presentation only, like the
- * background layer: it dims the rendering, it does not claim any geography.
- */
-const VEIL_RECT: GeoJSON.FeatureCollection = {
-  type: 'FeatureCollection',
-  features: [
-    {
-      type: 'Feature',
-      properties: {},
-      geometry: {
-        type: 'Polygon',
-        coordinates: [
-          [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]],
-        ],
-      },
-    },
-  ],
-};
 
 /** A filter that matches nothing; used to park the spotlight layers. */
 const MATCH_NOTHING: ExpressionSpecification = ['==', ['id'], -999];
@@ -292,7 +270,6 @@ export class TerritoryMap {
         },
         [LAKES_SOURCE]: { type: 'geojson', data: EMPTY },
         [EVENTS_SOURCE]: { type: 'geojson', data: EMPTY },
-        [VEIL_SOURCE]: { type: 'geojson', data: VEIL_RECT },
         [MODERN_SOURCE]: { type: 'geojson', data: EMPTY, tolerance: 0.15 },
         [SOURCE_ID]: {
           type: 'geojson',
@@ -442,19 +419,8 @@ export class TerritoryMap {
           },
         },
         {
-          // The spotlight veil: greys the whole rendering while an event
-          // popup is open. Its opacity is 0 unless a spotlight is active.
-          id: VEIL_LAYER,
-          type: 'fill',
-          source: VEIL_SOURCE,
-          paint: {
-            'fill-color': this.dark ? '#0c0c0b' : '#f2f1ec',
-            'fill-opacity': 0,
-            'fill-opacity-transition': { duration: 250 },
-          },
-        },
-        {
-          // The spotlit territories, redrawn above the veil in full colour.
+          // The spotlit territories, redrawn in full colour above everything
+          // the spotlight has muted (see applySpotlight).
           id: SPOT_FILL_LAYER,
           type: 'fill',
           source: SOURCE_ID,
@@ -788,6 +754,8 @@ export class TerritoryMap {
       this.map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
     }
     this.map.setPaintProperty(BACKGROUND_LAYER, 'background-color', this.backgroundColor());
+    // An active spotlight owns the background colour; re-mute it.
+    this.applySpotlight();
   }
 
   isBasemapVisible(): boolean {
@@ -812,11 +780,11 @@ export class TerritoryMap {
     this.map.setPaintProperty(SELECTED_LAYER, 'line-color', dark ? '#ffd54a' : '#8a4b00');
     this.map.setPaintProperty(EVENTS_LAYER, 'circle-color', dark ? '#ff7a70' : '#b3261e');
     this.map.setPaintProperty(EVENTS_LAYER, 'circle-stroke-color', dark ? '#1a1a19' : '#ffffff');
-    this.map.setPaintProperty(VEIL_LAYER, 'fill-color', dark ? '#0c0c0b' : '#f2f1ec');
     this.map.setPaintProperty(SPOT_FILL_LAYER, 'fill-color', this.fillColorExpression());
     this.map.setPaintProperty(SPOT_LINE_LAYER, 'line-color', dark ? '#f4f3ee' : '#14140f');
     this.map.setPaintProperty(MODERN_LAYER, 'line-color', dark ? '#f4f3ee' : '#14140f');
     this.applySides();
+    this.applySpotlight();
   }
 
   /* ------------------------------------------------- chapter sides tint */
@@ -876,13 +844,63 @@ export class TerritoryMap {
   setSpotlight(ids: number[] | null): void {
     this.spotlightIds = ids;
     if (!this.ready) return;
+    this.applySpotlight();
+  }
+
+  /**
+   * The dimming itself. Rather than laying a translucent veil polygon over
+   * the map (which left colour bleeding through and rendered with artefacts),
+   * the base layers are repainted: every territory, outline, coast and the
+   * ocean become flat neutral greys, and only the spotlit features keep the
+   * normal colour expressions. Clearing restores the standard paints.
+   */
+  private applySpotlight(): void {
+    if (!this.ready) return;
+    const ids = this.spotlightIds;
     const active = ids !== null && ids.length > 0;
-    this.map.setPaintProperty(VEIL_LAYER, 'fill-opacity', active ? 0.6 : 0);
+
     const filter: ExpressionSpecification = active
       ? (['in', ['id'], ['literal', ids]] as unknown as ExpressionSpecification)
       : MATCH_NOTHING;
     this.map.setFilter(SPOT_FILL_LAYER, filter);
     this.map.setFilter(SPOT_LINE_LAYER, filter);
+
+    if (!active) {
+      this.map.setPaintProperty(FILL_LAYER, 'fill-color', this.fillColorExpression());
+      for (const layer of [OUTLINE_PRECISE, OUTLINE_FUZZY]) {
+        this.map.setPaintProperty(layer, 'line-color', this.outlineColorExpression());
+      }
+      this.map.setPaintProperty(BACKGROUND_LAYER, 'background-color', this.backgroundColor());
+      this.map.setPaintProperty(LAND_LAYER, 'fill-color', this.dark ? '#26261f' : '#efede7');
+      this.map.setPaintProperty(LAKES_LAYER, 'fill-color', this.waterColor());
+      this.map.setPaintProperty(COAST_LAYER, 'line-color', this.dark ? '#43423b' : '#c2bfb6');
+      return;
+    }
+
+    const inSpot = ['in', ['id'], ['literal', ids]];
+    const muteFill = this.dark ? '#232322' : '#e6e5e0';
+    const muteLine = this.dark ? '#31312f' : '#d6d5cf';
+    const muteLand = this.dark ? '#1e1e1d' : '#edebe6';
+    const muteWater = this.dark ? '#181817' : '#f3f2ee';
+
+    this.map.setPaintProperty(FILL_LAYER, 'fill-color', [
+      'case',
+      inSpot,
+      this.fillColorExpression(),
+      muteFill,
+    ] as unknown as ExpressionSpecification);
+    for (const layer of [OUTLINE_PRECISE, OUTLINE_FUZZY]) {
+      this.map.setPaintProperty(layer, 'line-color', [
+        'case',
+        inSpot,
+        this.outlineColorExpression(),
+        muteLine,
+      ] as unknown as ExpressionSpecification);
+    }
+    this.map.setPaintProperty(BACKGROUND_LAYER, 'background-color', muteWater);
+    this.map.setPaintProperty(LAND_LAYER, 'fill-color', muteLand);
+    this.map.setPaintProperty(LAKES_LAYER, 'fill-color', muteWater);
+    this.map.setPaintProperty(COAST_LAYER, 'line-color', muteLine);
   }
 
   hasSpotlight(): boolean {

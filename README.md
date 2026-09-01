@@ -112,10 +112,12 @@ displayed as "not in dataset" rather than filled in.
   press, never a hand-drawn "modern map".
 - **Event spotlight.** While an event popup is open in the main view, the
   dataset territories containing the event's coordinates stay lit and the
-  rest of the rendering dims behind a veil. The spotlight is a pure
-  point-in-polygon lookup against the loaded snapshot — dataset polygons only;
-  an event at sea spotlights nothing. Inside a chapter the veil is not used —
-  the frame and side tints already carry the context there.
+  rest of the map is repainted as a flat, colourless grey — fills, outlines,
+  coasts and ocean alike. The spotlight is a pure point-in-polygon lookup
+  against the loaded snapshot — dataset polygons only; an event at sea
+  spotlights nothing, and closing the popup restores the normal colours.
+  Inside a chapter the map is not muted — the frame and side tints already
+  carry the context there.
 
 ## Licensing
 
