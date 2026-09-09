@@ -45,6 +45,14 @@ export interface NameIndexManifest {
   count: number;
 }
 
+/** Simplified, NAME/SUBJECTO-only copies of every snapshot for point lookups. */
+export interface LookupManifest {
+  tool: string;
+  tolerance: string;
+  bytes: number;
+  files: Array<{ year: number; path: string; bytes: number }>;
+}
+
 export interface Manifest {
   /** Absent in manifests produced before the basemap was vendored. */
   basemap?: BasemapManifest;
@@ -52,6 +60,8 @@ export interface Manifest {
   fonts?: FontsManifest;
   /** Absent in manifests produced before the name index existed. */
   nameIndex?: NameIndexManifest;
+  /** Absent in manifests produced before the lookup set existed. */
+  lookup?: LookupManifest;
   generatedFrom: {
     repository: string;
     commit: string;

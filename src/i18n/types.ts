@@ -181,6 +181,29 @@ export interface Strings {
   /** The "about the data" dialog opened from the top bar. */
   aboutButton: string;
 
+  /** Guide mode: welcome card, narrated chapters, changes, place history. */
+  guideToggle: string;
+  guideToggleTitle: string;
+  welcomeTitle: string;
+  welcomeIntro: string;
+  welcomeExplore: string;
+  welcomeExploreHint: string;
+  welcomeChapters: string;
+  welcomeChaptersHint: string;
+  welcomeSearch: string;
+  welcomeSearchHint: string;
+  changesToggle: string;
+  changesTitle: (previousYear: string) => string;
+  changesNone: string;
+  changesSummary: (count: string, compared: string, previousYear: string) => string;
+  historyToggle: string;
+  historyTitle: string;
+  historyHint: string;
+  historyLoading: (done: string, total: string) => string;
+  historyHeading: (lat: string, lon: string) => string;
+  historyNote: string;
+  historyNowhere: string;
+
   disclaimerTitle: string;
   disclaimerBody: string;
   disclaimerDismiss: string;

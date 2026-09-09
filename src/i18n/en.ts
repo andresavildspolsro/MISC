@@ -179,6 +179,33 @@ export const en: Strings = {
 
   aboutButton: 'About the data',
 
+  guideToggle: 'Guide',
+  guideToggleTitle:
+    'Guide mode: a welcome card, chapters told as a story, changes between snapshots and the history of a place',
+  welcomeTitle: 'Where to start?',
+  welcomeIntro:
+    'The map shows borders as an open dataset records them, snapshot by snapshot. Pick a way in:',
+  welcomeExplore: 'Explore the map',
+  welcomeExploreHint: 'Roam freely through years and territories.',
+  welcomeChapters: 'Follow a chapter',
+  welcomeChaptersHint: 'Wars, discoveries, revolutions and eras with milestones.',
+  welcomeSearch: 'Find a place',
+  welcomeSearchHint: 'A territory, an event or a year.',
+  changesToggle: 'Changes',
+  changesTitle: (previousYear) =>
+    `Highlight territories whose holder differs, in the dataset’s records, from the ${previousYear} snapshot`,
+  changesNone: 'The first snapshot has nothing to compare with.',
+  changesSummary: (count, compared, previousYear) =>
+    `${count} of ${compared} named territories have a different holder than in the ${previousYear} snapshot. A comparison of dataset records, not a list of events.`,
+  historyToggle: 'Place history',
+  historyTitle: 'Click the map to see who held that place in every snapshot',
+  historyHint: 'Click anywhere on the map.',
+  historyLoading: (done, total) => `Loading the lookup set… ${done} of ${total}`,
+  historyHeading: (lat, lon) => `History of ${lat}, ${lon}`,
+  historyNote:
+    'The answer comes from a simplified copy of the dataset made for lookups; the exact shapes are on the map. An empty row means no territory covers the place in that snapshot.',
+  historyNowhere: 'outside mapped territories',
+
   disclaimerTitle: 'Borders before 1648 are approximations',
   disclaimerBody:
     'The dataset authors note that in Europe the concept of a fixed national boundary only becomes meaningful after the Peace of Westphalia (1648). Earlier polities had overlapping, gradual and often undefined frontiers. Treat every line on this map as a scholarly approximation, not a surveyed border.',

@@ -62,9 +62,9 @@ displayed as "not in dataset" rather than filled in.
   style: borders the dataset records as legally determined are solid, and
   approximate ones are dashed and faded.
 - **Detail panel on hover.** Pointing at a territory shows its full dataset
-  record beside the map — every property it carries, with the raw key next to
-  the human label so the panel can be audited against the source file, plus a
-  note naming the file the geometry came from. A click *pins* the panel so it
+  record beside the map — every property it carries under a human label (the
+  raw key is the label's tooltip, so the panel can still be audited against
+  the source file), plus a note naming the file the geometry came from. A click *pins* the panel so it
   survives the pointer moving away; the panel says which of the two states it
   is in, so content changing under the cursor never looks arbitrary. Closing it
   returns to hover previewing. The hovered border glows softly — a blurred halo
@@ -167,6 +167,39 @@ displayed as "not in dataset" rather than filled in.
   Inside a chapter the map is not muted — the frame and side tints already
   carry the context there.
 
+## Guide mode
+
+A switch in the top bar (`Guide`, remembered per browser, also `?guide=1`)
+turns on four things built for learning rather than reference. Off by
+default; everything it adds is derived from the same dataset records and says
+so on screen.
+
+- **A welcome card** with three ways in — explore the map, follow a chapter,
+  find a place — shown once per visit and again whenever the guide is switched
+  on by hand.
+- **Chapters told as a story.** The current milestone (year, name, description,
+  source) is written into the chapter card itself instead of a map popup, and
+  the map moves to the place of the milestone as you step.
+- **What changed.** A `Changes` chip highlights every named territory of the
+  shown snapshot whose holder — `SUBJECTO`, falling back to `NAME` — differs
+  from the record at the same point in the previous snapshot, with the count
+  in the chip and a one-line summary ("79 of 598 named territories…"). It is a
+  diff of dataset records, computed in the browser from the two files, and the
+  summary says it is not a list of events: an upstream respelling counts, a
+  transfer the dataset does not draw does not. The first snapshot has nothing
+  to compare with, so the chip is disabled there.
+- **History of a place.** A `Place history` chip turns the cursor into a
+  crosshair; a click on the map lists, for every snapshot, the territory (and
+  its `SUBJECTO`) the dataset records at that point, with a year button to jump
+  there and rows that repeat the previous holder faded so the changes stand
+  out. Answered from a **lookup set** the data pipeline builds: every snapshot
+  simplified with mapshaper at 3% (`keep-shapes`, two-decimal coordinates,
+  `NAME` and `SUBJECTO` only), 5.3 MB for all 53 files, fetched once on first
+  use with a progress readout. The panel says the answer comes from a
+  simplified copy; the map keeps drawing the full geometry.
+
+The quiz sketched in the design notes is not built.
+
 ## Licensing
 
 The border dataset is licensed **GPL-3.0** (verified in the upstream repository's
@@ -218,13 +251,16 @@ npm run preview
    Latin Extended, IPA, Greek — 366 kB, fetched by the map range by range as
    needed) from `maplibre/demotiles` at a pinned commit into
    `public/data/fonts/`, for the territory labels.
-8. Writes `public/data/names.json` — every `NAME` value in the dataset, verbatim,
+8. Writes the guide-mode lookup set into `public/data/lookup/` — each snapshot
+   through mapshaper at 3% with `keep-shapes`, coordinates to two decimals and
+   only `NAME` and `SUBJECTO` kept — and records the files in the manifest.
+9. Writes `public/data/names.json` — every `NAME` value in the dataset, verbatim,
    with the sorted list of snapshot years it appears in (~3 000 names, 100 kB).
    The search loads it on first use.
-9. Writes `public/data/manifest.json` — the list of years, filenames, feature
-   counts, byte sizes and the property keys each file actually carries, plus
-   the basemap, font and name-index entries. The app reads only this
-   manifest; it never fetches from GitHub at runtime.
+10. Writes `public/data/manifest.json` — the list of years, filenames, feature
+    counts, byte sizes and the property keys each file actually carries, plus
+    the basemap, font, name-index and lookup entries. The app reads only this
+    manifest; it never fetches from GitHub at runtime.
 
 `public/data/` is generated and git-ignored (~70 MB). Everything needed to
 reproduce it is in the script.

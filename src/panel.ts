@@ -75,11 +75,9 @@ function renderRow(key: string, value: unknown): HTMLElement {
   const label = strings.propertyLabels[key] ?? key;
 
   const dt = element('dt', 'prop__label', label);
-  // Show the raw key alongside a friendly label so the panel stays auditable
-  // against the source file.
-  if (strings.propertyLabels[key]) {
-    dt.append(element('span', 'prop__key', key));
-  }
+  // The raw key stays reachable as a tooltip so the panel can still be
+  // audited against the source file, without cluttering every row.
+  if (strings.propertyLabels[key]) dt.title = key;
 
   const dd = element('dd', 'prop__value');
   dd.append(renderValue(key, value));

@@ -44,6 +44,15 @@
         </form>
 
         <div class="topbar__controls">
+          <button
+            id="guide-toggle"
+            class="control control--guide"
+            type="button"
+            aria-pressed="false"
+            data-i18n-aria="guideToggleTitle"
+          >
+            <span data-i18n="guideToggle"></span>
+          </button>
           <button id="about-open" class="control topbar__about" type="button" data-i18n-aria="aboutButton">
             <span data-i18n="aboutButton"></span>
           </button>
@@ -72,6 +81,10 @@
             </button>
             <button id="modern-toggle" class="chip chip--modern" type="button" aria-pressed="false">
               <span data-i18n="modernToggle"></span>
+            </button>
+            <button id="changes-toggle" class="chip chip--guide" type="button" aria-pressed="false" hidden></button>
+            <button id="history-toggle" class="chip chip--guide" type="button" aria-pressed="false" hidden>
+              <span data-i18n="historyToggle"></span>
             </button>
             <button
               id="help-toggle"
@@ -106,6 +119,29 @@
 
           <aside id="facts" class="facts" data-i18n-aria="factsAriaLabel" hidden></aside>
         </div>
+
+        <!-- Guide mode: the welcome card with three ways in. -->
+        <aside id="welcome" class="legend welcome" hidden>
+          <div class="legend__head">
+            <h2 class="legend__title" data-i18n="welcomeTitle"></h2>
+            <button id="welcome-close" class="legend__close" type="button" data-i18n-aria="panelClose">×</button>
+          </div>
+          <p class="legend__note" data-i18n="welcomeIntro"></p>
+          <div class="welcome__paths">
+            <button id="welcome-explore" class="welcome__path" type="button">
+              <strong data-i18n="welcomeExplore"></strong>
+              <span data-i18n="welcomeExploreHint"></span>
+            </button>
+            <button id="welcome-chapters" class="welcome__path" type="button">
+              <strong data-i18n="welcomeChapters"></strong>
+              <span data-i18n="welcomeChaptersHint"></span>
+            </button>
+            <button id="welcome-search" class="welcome__path" type="button">
+              <strong data-i18n="welcomeSearch"></strong>
+              <span data-i18n="welcomeSearchHint"></span>
+            </button>
+          </div>
+        </aside>
 
         <aside id="legend" class="legend" hidden>
           <div class="legend__head">
@@ -194,6 +230,8 @@
             <span id="chapter-badge" class="chapter__badge"></span>
             <button id="chapter-prestate" class="control chapter__prestate" type="button" hidden></button>
           </div>
+          <!-- Guide mode: the current milestone, told first. -->
+          <div id="chapter-story" class="chapter__story" hidden></div>
           <p id="chapter-desc" class="chapter__desc"></p>
           <div id="chapter-sides" class="chapter__sides" hidden></div>
           <p id="chapter-note" class="chapter__note" hidden></p>

@@ -11,6 +11,7 @@ setWorkerUrl(maplibreWorkerUrl);
 
 import { ChapterAxis } from './chapterAxis';
 import { loadManifest, loadSnapshot, prefetchSnapshot } from './data';
+import { computeChanges } from './changes';
 import { assignEventsToSnapshots, type HistEvent } from './events';
 import { EVENTS } from './eventsData';
 import { resolveMilestones, type Period, type PeriodCategory } from './periods';
@@ -24,6 +25,7 @@ import { labelsFeatureCollection, territoryLabels, type TerritoryLabel } from '.
 import { EUROPE_BOUNDS, TerritoryMap } from './map';
 import { loadNameIndex, type NameIndex } from './nameIndex';
 import { DetailPanel } from './panel';
+import { historyAt, loadLookup, lookupLoaded } from './placeHistory';
 import { fold, matchScore, SearchBox, type SearchResult } from './search';
 import {
   LOCALE_CODES,
@@ -56,6 +58,8 @@ const FACTS_OPEN_KEY = 'historical-map:facts-open';
 const EVENTS_OPEN_KEY = 'historical-map:events-open';
 const LABELS_OPEN_KEY = 'historical-map:labels-open';
 const HELP_SEEN_KEY = 'historical-map:help-seen';
+const GUIDE_KEY = 'historical-map:guide';
+const WELCOME_SEEN_KEY = 'historical-map:welcome-seen';
 
 /** Most results the search list shows; it is a shortlist, not a directory. */
 const SEARCH_LIMIT = 10;
@@ -171,6 +175,21 @@ class App {
   private modernRequested = false;
 
   private readonly aboutDialog = requireElement<HTMLDialogElement>('#about');
+
+  /**
+   * Guide mode (off by default): a welcome card with three ways in, chapters
+   * told as a story in their card, a "what changed" highlight against the
+   * previous snapshot, and "history of a place" on click. Everything it adds
+   * is derived from the same dataset records and says so.
+   */
+  private guideOn = false;
+  private readonly guideToggle = requireElement<HTMLButtonElement>('#guide-toggle');
+  private readonly welcomeNode = requireElement<HTMLElement>('#welcome');
+  private readonly changesToggle = requireElement<HTMLButtonElement>('#changes-toggle');
+  private changesOn = false;
+  private readonly historyToggle = requireElement<HTMLButtonElement>('#history-toggle');
+  private historyOn = false;
+  private readonly storyNode = requireElement<HTMLElement>('#chapter-story');
   private readonly worldCrumb = requireElement<HTMLButtonElement>('#reset-world');
   private readonly europeCrumb = requireElement<HTMLButtonElement>('#reset-view');
   /** Narrow screens get a bottom sheet instead of map popups. */
@@ -207,6 +226,7 @@ class App {
         onEventsClick: (ids, at) => this.handleEventsClick(ids, at),
         onPopupClose: () => this.map.setSpotlight(null),
         onViewChange: (zoom, center) => this.updateBreadcrumb(zoom, center),
+        onPointClick: (lngLat) => void this.showPlaceHistory(lngLat),
       },
       // A stale cached manifest may predate the vendored basemap. The map
       // must come up without it rather than dying in the constructor.
@@ -410,6 +430,8 @@ class App {
       if (event.key === 'Escape' && !this.chaptersDrawer.hidden) this.setChaptersOpen(false);
     });
 
+    this.bindGuide();
+
     requireElement('#about-open').addEventListener('click', () => this.aboutDialog.showModal());
     requireElement('#about-close').addEventListener('click', () => this.aboutDialog.close());
     // A click on the backdrop (outside the dialog box) closes it too.
@@ -497,6 +519,242 @@ class App {
     this.modernToggle.setAttribute('aria-label', title);
   }
 
+  /* -------------------------------------------------------------- guide */
+
+  private bindGuide(): void {
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem(GUIDE_KEY);
+    } catch {
+      /* off by default */
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('guide')) stored = params.get('guide') === '0' ? '0' : '1';
+    this.guideOn = stored === '1';
+    this.guideToggle.addEventListener('click', () => this.setGuide(!this.guideOn, true));
+
+    requireElement('#welcome-close').addEventListener('click', () => this.setWelcomeOpen(false));
+    requireElement('#welcome-explore').addEventListener('click', () => this.setWelcomeOpen(false));
+    requireElement('#welcome-chapters').addEventListener('click', () => {
+      this.setWelcomeOpen(false);
+      this.setChaptersOpen(true);
+    });
+    requireElement('#welcome-search').addEventListener('click', () => {
+      this.setWelcomeOpen(false);
+      requireElement<HTMLInputElement>('#search-input').focus();
+    });
+
+    this.changesToggle.addEventListener('click', () => {
+      this.changesOn = !this.changesOn;
+      void this.refreshChanges(true);
+    });
+    this.historyToggle.addEventListener('click', () => this.setHistoryMode(!this.historyOn));
+
+    this.applyGuide(false);
+  }
+
+  private setGuide(on: boolean, announce: boolean): void {
+    this.guideOn = on;
+    try {
+      window.localStorage.setItem(GUIDE_KEY, on ? '1' : '0');
+    } catch {
+      /* fine */
+    }
+    const url = new URL(window.location.href);
+    if (on) url.searchParams.set('guide', '1');
+    else url.searchParams.delete('guide');
+    window.history.replaceState(null, '', url);
+    this.applyGuide(announce);
+  }
+
+  /** Shows or hides everything guide mode adds. */
+  private applyGuide(justSwitchedOn: boolean): void {
+    const on = this.guideOn;
+    this.guideToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    this.changesToggle.hidden = !on;
+    this.historyToggle.hidden = !on || !this.manifest.lookup;
+    this.storyNode.hidden = !on || !this.activePeriod;
+
+    if (!on) {
+      this.changesOn = false;
+      this.setHistoryMode(false);
+      this.map.setChanges(null);
+      this.setWelcomeOpen(false);
+      this.storyNode.innerHTML = '';
+      return;
+    }
+
+    void this.refreshChanges(false);
+    if (this.activePeriod) this.renderStory();
+
+    // The welcome card: once per visit, and again when the guide is switched
+    // on by hand — that is a request to be shown the way in.
+    let seen = false;
+    try {
+      seen = window.sessionStorage.getItem(WELCOME_SEEN_KEY) === '1';
+    } catch {
+      /* show it */
+    }
+    if (justSwitchedOn || (!seen && !this.activePeriod)) this.setWelcomeOpen(true);
+  }
+
+  private setWelcomeOpen(open: boolean): void {
+    this.welcomeNode.hidden = !open;
+    if (open) this.setHelpOpen(false);
+    if (!open) {
+      try {
+        window.sessionStorage.setItem(WELCOME_SEEN_KEY, '1');
+      } catch {
+        /* fine */
+      }
+    }
+  }
+
+  /**
+   * "What changed": highlights territories whose holder differs from the
+   * previous snapshot. The previous snapshot is usually already prefetched.
+   */
+  private async refreshChanges(announce: boolean): Promise<void> {
+    const on = this.guideOn && this.changesOn;
+    this.changesToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    this.changesToggle.textContent = strings.changesToggle;
+    const previous = this.snapshots[this.currentIndex - 1];
+    this.changesToggle.disabled = !previous;
+    this.changesToggle.title = previous
+      ? strings.changesTitle(formatYear(previous.year))
+      : strings.changesNone;
+    if (!on || !previous || !this.collection) {
+      this.map.setChanges(null);
+      return;
+    }
+    const current = this.collection;
+    const token = this.loadToken;
+    try {
+      const before = await loadSnapshot(previous);
+      if (token !== this.loadToken || this.collection !== current || !this.changesOn) return;
+      const result = computeChanges(current, before);
+      this.map.setChanges(result.changed);
+      this.changesToggle.textContent = `${strings.changesToggle} (${formatCount(result.changed.length)})`;
+      if (announce) {
+        this.showTransient(
+          strings.changesSummary(
+            formatCount(result.changed.length),
+            formatCount(result.compared),
+            formatYear(previous.year),
+          ),
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      this.map.setChanges(null);
+    }
+  }
+
+  /** "History of a place": the next map click answers with every snapshot. */
+  private setHistoryMode(on: boolean): void {
+    this.historyOn = on && this.guideOn && Boolean(this.manifest.lookup);
+    this.historyToggle.setAttribute('aria-pressed', this.historyOn ? 'true' : 'false');
+    this.historyToggle.title = strings.historyTitle;
+    this.map.setPointMode(this.historyOn);
+    if (this.historyOn) {
+      this.clearSelection();
+      this.map.closePopup();
+      this.showTransient(strings.historyHint);
+    } else {
+      this.setStatus(null);
+    }
+  }
+
+  private async showPlaceHistory(lngLat: [number, number]): Promise<void> {
+    const lookup = this.manifest.lookup;
+    if (!lookup || !this.historyOn) return;
+    const [lon, lat] = lngLat;
+    if (!lookupLoaded(lookup)) {
+      try {
+        await loadLookup(lookup, (done, total) =>
+          this.setStatus(strings.historyLoading(formatCount(done), formatCount(total))),
+        );
+      } catch (error) {
+        console.error(error);
+        this.setStatus(strings.loadError(''), true);
+        return;
+      }
+      this.setStatus(null);
+      if (!this.historyOn) return;
+    }
+
+    const entries = historyAt(lookup, lon, lat);
+    const root = document.createElement('div');
+    root.className = 'history';
+    const note = document.createElement('p');
+    note.className = 'history__note';
+    note.textContent = strings.historyNote;
+    root.append(note);
+    const list = document.createElement('ol');
+    list.className = 'history__list';
+    const currentYear = this.snapshots[this.currentIndex].year;
+    let previousKey = '';
+    for (const entry of entries) {
+      const key = `${entry.name ?? ''}|${entry.subject ?? ''}`;
+      const row = document.createElement('li');
+      row.className = 'history__row';
+      row.classList.toggle('history__row--current', entry.year === currentYear);
+      row.classList.toggle('history__row--change', key !== previousKey);
+      previousKey = key;
+      const year = document.createElement('button');
+      year.type = 'button';
+      year.className = 'history__year';
+      year.textContent = formatYearShort(entry.year);
+      year.title = strings.goToYear(formatYear(entry.year));
+      year.addEventListener('click', () => this.timeline.jumpToYear(entry.year));
+      const who = document.createElement('span');
+      who.className = 'history__who';
+      if (entry.name) {
+        who.textContent = glossName(entry.name, localeCode) ?? entry.name;
+        if (entry.subject) {
+          const subject = document.createElement('span');
+          subject.className = 'history__subject';
+          subject.textContent = ` · ${glossName(entry.subject, localeCode) ?? entry.subject}`;
+          who.append(subject);
+        }
+      } else {
+        who.textContent = strings.historyNowhere;
+        who.classList.add('history__who--none');
+      }
+      row.append(year, who);
+      list.append(row);
+    }
+    root.append(list);
+    this.panel.showCustom(strings.historyHeading(lat.toFixed(2), lon.toFixed(2)), root);
+    this.panel.setOpen(true);
+  }
+
+  /** Guide mode: the current milestone told inside the chapter card. */
+  private renderStory(): void {
+    this.storyNode.innerHTML = '';
+    const event = this.periodMilestones[this.chapterAxis.currentIndex];
+    this.storyNode.hidden = !this.guideOn || !event;
+    if (!this.guideOn || !event) return;
+    const head = document.createElement('p');
+    head.className = 'chapter__story-head';
+    const year = document.createElement('span');
+    year.className = 'evpop__year';
+    year.textContent = formatYear(event.year);
+    head.append(year, document.createTextNode(` ${event.name[localeCode]}`));
+    const body = document.createElement('p');
+    body.className = 'chapter__story-text';
+    body.textContent = event.description[localeCode];
+    const src = document.createElement('p');
+    src.className = 'chapter__story-source';
+    const link = document.createElement('a');
+    link.href = event.source.url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = event.source.label;
+    src.append(document.createTextNode(`${strings.factsSource}: `), link);
+    this.storyNode.append(head, body, src);
+  }
+
   /* --------------------------------------------------------- breadcrumb */
 
   /**
@@ -548,6 +806,9 @@ class App {
     this.search.retranslate();
     this.renderHelpSteps();
     this.publishLabels();
+    void this.refreshChanges(false);
+    this.historyToggle.title = strings.historyTitle;
+    if (this.activePeriod) this.renderStory();
 
     const snapshot = this.snapshots[this.currentIndex];
     this.setBasemap(this.map.isBasemapVisible());
@@ -744,6 +1005,8 @@ class App {
     this.chapterNode.hidden = true;
     this.timelineNode.hidden = false;
     this.map.setSides(null);
+    this.storyNode.hidden = true;
+    this.storyNode.innerHTML = '';
     this.updateChromePadding();
 
     const url = new URL(window.location.href);
@@ -845,7 +1108,16 @@ class App {
     const snapshotIndex = this.snapshots.findIndex((snapshot) => snapshot.year >= event.year);
     if (snapshotIndex === -1) return;
 
-    const showPopup = () => this.handleEventsClick([event.id], [event.lon, event.lat]);
+    const showPopup = () => {
+      if (this.guideOn) {
+        // Told in the card, and the map moves to the place of the milestone.
+        this.map.closePopup();
+        this.renderStory();
+        this.map.flyToPoint([event.lon, event.lat], 4.6);
+        return;
+      }
+      this.handleEventsClick([event.id], [event.lon, event.lat]);
+    };
     if (snapshotIndex !== this.currentIndex) {
       this.timeline.syncIndex(snapshotIndex);
       void this.goTo(snapshotIndex).then(showPopup);
@@ -1314,6 +1586,7 @@ class App {
       this.collection = collection;
       this.map.setData(collection);
       this.publishLabels();
+      void this.refreshChanges(false);
       if (this.pendingNotice) {
         this.showTransient(this.pendingNotice);
         this.pendingNotice = null;

@@ -46,6 +46,8 @@ const SPOT_LINE_LAYER = 'spotlight-line';
 const MODERN_SOURCE = 'modern-source';
 const MODERN_LAYER = 'modern-outline';
 const LABELS_SOURCE = 'labels-source';
+const CHANGES_FILL_LAYER = 'changes-fill';
+const CHANGES_LINE_LAYER = 'changes-line';
 /** One symbol layer per area tier; see src/labels.ts. */
 const LABEL_LAYERS = TIER_MIN_ZOOMS.map((_zoom, tier) => `territory-labels-${tier}`);
 
@@ -153,6 +155,8 @@ export interface MapCallbacks {
   onHover: (featureIndex: number | null) => void;
   /** The view settled after a pan or zoom (for the breadcrumb). */
   onViewChange?: (zoom: number, center: [number, number]) => void;
+  /** A click anywhere while point mode is on (see setPointMode). */
+  onPointClick?: (lngLat: [number, number]) => void;
 }
 
 export class TerritoryMap {
@@ -185,6 +189,8 @@ export class TerritoryMap {
 
   private readonly fonts: FontsManifest | null;
   private labelsVisible = true;
+  /** Point mode: clicks report a coordinate instead of selecting a territory. */
+  private pointMode = false;
 
   constructor(
     container: HTMLElement,
@@ -473,6 +479,22 @@ export class TerritoryMap {
             'line-opacity': 0.9,
           },
         },
+        {
+          // "What changed" (guide mode): territories whose holder differs from
+          // the previous snapshot. Parked on a match-nothing filter otherwise.
+          id: CHANGES_FILL_LAYER,
+          type: 'fill',
+          source: SOURCE_ID,
+          filter: MATCH_NOTHING,
+          paint: { 'fill-color': this.changesColor(), 'fill-opacity': 0.32 },
+        },
+        {
+          id: CHANGES_LINE_LAYER,
+          type: 'line',
+          source: SOURCE_ID,
+          filter: MATCH_NOTHING,
+          paint: { 'line-color': this.changesColor(), 'line-width': 2, 'line-opacity': 0.95 },
+        },
         ...this.labelLayers(),
         {
           // Today's borders (the newest dataset snapshot), shown only while
@@ -555,6 +577,10 @@ export class TerritoryMap {
         'text-opacity': 1,
       },
     }));
+  }
+
+  private changesColor(): string {
+    return this.dark ? '#ffb454' : '#c25e00';
   }
 
   private labelColor(): string {
@@ -661,7 +687,7 @@ export class TerritoryMap {
     });
 
     this.map.on('mousemove', FILL_LAYER, (event: MapLayerMouseEvent) => {
-      if (isConsumed(event)) return;
+      if (isConsumed(event) || this.pointMode) return;
       const feature = event.features?.[0];
       if (!feature) return;
       this.map.getCanvas().style.cursor = 'pointer';
@@ -676,7 +702,7 @@ export class TerritoryMap {
     });
 
     this.map.on('click', FILL_LAYER, (event: MapLayerMouseEvent) => {
-      if (isConsumed(event)) return;
+      if (isConsumed(event) || this.pointMode) return;
       const feature = event.features?.[0];
       if (!feature || typeof feature.id !== 'number') return;
       this.select(feature.id);
@@ -686,6 +712,10 @@ export class TerritoryMap {
     // A click on empty ocean clears the selection.
     this.map.on('click', (event: MapMouseEvent) => {
       if (isConsumed(event)) return;
+      if (this.pointMode) {
+        this.callbacks.onPointClick?.([event.lngLat.lng, event.lngLat.lat]);
+        return;
+      }
       const hits = this.map.queryRenderedFeatures(event.point, { layers: [FILL_LAYER] });
       if (hits.length === 0) {
         this.select(null);
@@ -786,6 +816,8 @@ export class TerritoryMap {
     }
     const source = this.map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
     source?.setData(collection as GeoJSON.FeatureCollection);
+    // Feature ids are per-snapshot; a change set from another year is stale.
+    this.setChanges(null);
 
     // Feature ids are per-snapshot, so selection and hover cannot carry over.
     this.hoveredId = null;
@@ -910,8 +942,40 @@ export class TerritoryMap {
       this.map.setPaintProperty(layer, 'text-color', this.labelColor());
       this.map.setPaintProperty(layer, 'text-halo-color', this.labelHaloColor());
     }
+    this.map.setPaintProperty(CHANGES_FILL_LAYER, 'fill-color', this.changesColor());
+    this.map.setPaintProperty(CHANGES_LINE_LAYER, 'line-color', this.changesColor());
     this.applySides();
     this.applySpotlight();
+  }
+
+  /* ------------------------------------------------- changes and points */
+
+  /** Highlights the given feature ids as changed; null clears. */
+  setChanges(ids: number[] | null): void {
+    if (!this.ready) {
+      this.map.once('style.load', () => this.setChanges(ids));
+      return;
+    }
+    const filter: ExpressionSpecification =
+      ids && ids.length
+        ? (['in', ['id'], ['literal', ids]] as unknown as ExpressionSpecification)
+        : MATCH_NOTHING;
+    this.map.setFilter(CHANGES_FILL_LAYER, filter);
+    this.map.setFilter(CHANGES_LINE_LAYER, filter);
+  }
+
+  /**
+   * Point mode (guide: history of a place): the cursor becomes a crosshair,
+   * territories neither highlight nor select, and every click reports its
+   * coordinate through onPointClick.
+   */
+  setPointMode(on: boolean): void {
+    this.pointMode = on;
+    this.map.getCanvas().style.cursor = on ? 'crosshair' : '';
+    if (on) {
+      this.setHovered(null);
+      this.hideTooltip();
+    }
   }
 
   /* ------------------------------------------------------------- labels */

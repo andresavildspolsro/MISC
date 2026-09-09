@@ -83,6 +83,16 @@ const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const OUT_DIR = path.join(ROOT, 'public', 'data');
 const BASEMAP_DIR = path.join(OUT_DIR, 'basemap');
 const FONTS_DIR = path.join(OUT_DIR, 'fonts');
+const LOOKUP_DIR = path.join(OUT_DIR, 'lookup');
+
+/**
+ * The "history of a place" lookup set: every snapshot again, but heavily
+ * simplified and stripped to NAME and SUBJECTO, so that all 53 can be loaded
+ * at once (~5 MB, ~1.5 MB compressed) to answer "who held this point in
+ * every year". Never drawn — the map always shows the full geometry — and
+ * the UI says the answer comes from a simplified copy.
+ */
+const LOOKUP_TOLERANCE = '3%';
 const CACHE_DIR = path.join(ROOT, 'node_modules', '.cache', 'historical-basemaps');
 
 /** Default mapshaper tolerance. Conservative: visually lossless at world scale. */
@@ -182,6 +192,30 @@ function simplify(inputFile, outputFile, tolerance) {
       outputFile,
     ],
     { stdio: ['ignore', 'ignore', 'inherit'] },
+  );
+}
+
+/* ---------------------------------------------------------------- lookup */
+
+function buildLookup(inputFile, outputFile) {
+  const bin = path.join(ROOT, 'node_modules', '.bin', 'mapshaper');
+  execFileSync(
+    bin,
+    [
+      inputFile,
+      '-simplify',
+      LOOKUP_TOLERANCE,
+      'keep-shapes',
+      '-filter-fields',
+      'NAME,SUBJECTO',
+      '-o',
+      'format=geojson',
+      'precision=0.01',
+      outputFile,
+    ],
+    // mapshaper reports unrepairable self-intersections on most files; for a
+    // point-in-polygon lookup they are harmless and would only spam the log.
+    { stdio: ['ignore', 'ignore', 'ignore'] },
   );
 }
 
@@ -320,6 +354,7 @@ async function main() {
   const snapshots = [];
   /** NAME -> set of snapshot years the name appears in (for search). */
   const namesToYears = new Map();
+  const lookupFiles = [];
 
   for (const filename of snapshotFiles) {
     const year = parseYearFromFilename(filename);
@@ -344,6 +379,15 @@ async function main() {
     } catch (error) {
       fail(`${filename} is not valid JSON: ${error.message}`);
     }
+
+    await fs.mkdir(LOOKUP_DIR, { recursive: true });
+    const lookupFile = path.join(LOOKUP_DIR, filename);
+    buildLookup(destination, lookupFile);
+    lookupFiles.push({
+      year,
+      path: `data/lookup/${filename}`,
+      bytes: (await fs.stat(lookupFile)).size,
+    });
     if (parsed?.type !== 'FeatureCollection' || !Array.isArray(parsed.features)) {
       fail(`${filename} is not a GeoJSON FeatureCollection`);
     }
@@ -401,10 +445,15 @@ async function main() {
   };
   log(`name index: ${nameIndex.count} names, ${(nameIndex.bytes / 1024).toFixed(0)} kB`);
 
+  lookupFiles.sort((a, b) => a.year - b.year);
+  const lookupBytes = lookupFiles.reduce((sum, file) => sum + file.bytes, 0);
+  log(`lookup set: ${lookupFiles.length} files, ${(lookupBytes / 1e6).toFixed(1)} MB at ${LOOKUP_TOLERANCE}`);
+
   const manifest = {
     basemap,
     fonts,
     nameIndex,
+    lookup: { tool: 'mapshaper', tolerance: LOOKUP_TOLERANCE, bytes: lookupBytes, files: lookupFiles },
     generatedFrom: {
       repository: `https://github.com/${UPSTREAM.owner}/${UPSTREAM.repo}`,
       commit: UPSTREAM.commit,

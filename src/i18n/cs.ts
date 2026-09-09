@@ -180,6 +180,33 @@ export const cs: Strings = {
 
   aboutButton: 'O datech',
 
+  guideToggle: 'Průvodce',
+  guideToggleTitle:
+    'Režim průvodce: úvodní rozcestník, kapitoly jako vyprávění, změny mezi snímky a historie místa',
+  welcomeTitle: 'Kudy do historie?',
+  welcomeIntro:
+    'Mapa ukazuje hranice tak, jak je zaznamenává otevřená datová sada, snímek po snímku. Vyberte si cestu:',
+  welcomeExplore: 'Prozkoumat mapu',
+  welcomeExploreHint: 'Volně procházet roky a území.',
+  welcomeChapters: 'Projít kapitolu',
+  welcomeChaptersHint: 'Války, objevy, revoluce a éry s milníky.',
+  welcomeSearch: 'Najít místo',
+  welcomeSearchHint: 'Území, událost nebo rok.',
+  changesToggle: 'Změny',
+  changesTitle: (previousYear) =>
+    `Zvýraznit území, která mají podle záznamů datové sady jiného držitele než ve snímku ${previousYear}`,
+  changesNone: 'První snímek nemá s čím srovnávat.',
+  changesSummary: (count, compared, previousYear) =>
+    `${count} z ${compared} pojmenovaných území má jiného držitele než ve snímku ${previousYear}. Jde o porovnání záznamů datové sady, ne o seznam událostí.`,
+  historyToggle: 'Historie místa',
+  historyTitle: 'Klepnutím na mapu zjistíte, kdo dané místo držel v každém snímku',
+  historyHint: 'Klepněte kamkoli na mapu.',
+  historyLoading: (done, total) => `Načítá se vyhledávací sada… ${done} z ${total}`,
+  historyHeading: (lat, lon) => `Historie místa ${lat}, ${lon}`,
+  historyNote:
+    'Odpověď pochází ze zjednodušené kopie datové sady určené pro vyhledávání; přesné tvary vidíte na mapě. Prázdný řádek znamená, že v daném snímku místo žádné území nepokrývá.',
+  historyNowhere: 'mimo zmapovaná území',
+
   disclaimerTitle: 'Hranice před rokem 1648 jsou přibližné',
   disclaimerBody:
     'Autoři datové sady upozorňují, že v Evropě dává pojem pevné státní hranice smysl až po vestfálském míru (1648). Dřívější útvary měly překrývající se, pozvolné a často nevymezené hranice. Každou čáru na této mapě berte jako odborný odhad, nikoli jako zaměřenou hranici.',

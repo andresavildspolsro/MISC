@@ -180,6 +180,33 @@ export const es: Strings = {
 
   aboutButton: 'Sobre los datos',
 
+  guideToggle: 'Guía',
+  guideToggleTitle:
+    'Modo guía: tarjeta de bienvenida, capítulos narrados, cambios entre instantáneas e historia de un lugar',
+  welcomeTitle: '¿Por dónde empezar?',
+  welcomeIntro:
+    'El mapa muestra las fronteras tal como las registra un conjunto de datos abierto, instantánea a instantánea. Elige un camino:',
+  welcomeExplore: 'Explorar el mapa',
+  welcomeExploreHint: 'Recorrer libremente los años y los territorios.',
+  welcomeChapters: 'Seguir un capítulo',
+  welcomeChaptersHint: 'Guerras, descubrimientos, revoluciones y épocas con hitos.',
+  welcomeSearch: 'Buscar un lugar',
+  welcomeSearchHint: 'Un territorio, un evento o un año.',
+  changesToggle: 'Cambios',
+  changesTitle: (previousYear) =>
+    `Resaltar los territorios cuyo titular difiere, según los registros del conjunto de datos, de la instantánea de ${previousYear}`,
+  changesNone: 'La primera instantánea no tiene con qué compararse.',
+  changesSummary: (count, compared, previousYear) =>
+    `${count} de ${compared} territorios con nombre tienen un titular distinto al de la instantánea de ${previousYear}. Es una comparación de registros, no una lista de eventos.`,
+  historyToggle: 'Historia del lugar',
+  historyTitle: 'Haz clic en el mapa para ver quién tuvo ese lugar en cada instantánea',
+  historyHint: 'Haz clic en cualquier punto del mapa.',
+  historyLoading: (done, total) => `Cargando el conjunto de búsqueda… ${done} de ${total}`,
+  historyHeading: (lat, lon) => `Historia de ${lat}, ${lon}`,
+  historyNote:
+    'La respuesta procede de una copia simplificada del conjunto de datos hecha para búsquedas; las formas exactas están en el mapa. Una fila vacía significa que ningún territorio cubre el lugar en esa instantánea.',
+  historyNowhere: 'fuera de los territorios cartografiados',
+
   disclaimerTitle: 'Las fronteras anteriores a 1648 son aproximaciones',
   disclaimerBody:
     'Los autores del conjunto de datos señalan que en Europa el concepto de frontera nacional fija solo cobra sentido después de la Paz de Westfalia (1648). Las entidades políticas anteriores tenían fronteras superpuestas, graduales y a menudo indefinidas. Considera cada línea de este mapa una aproximación académica, no una frontera medida.',
