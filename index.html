@@ -22,19 +22,34 @@
           <p class="topbar__tagline" data-i18n="appTagline"></p>
         </div>
 
+        <form id="search" class="search" role="search" autocomplete="off">
+          <span class="search__icon" aria-hidden="true">⌕</span>
+          <input
+            id="search-input"
+            class="search__input"
+            type="search"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls="search-results"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <ul id="search-results" class="search__results" role="listbox" hidden></ul>
+        </form>
+
         <div class="topbar__controls">
-          <label class="control control--select">
-            <span id="language-label" class="control__state"></span>
-            <select id="language-select" class="control__select"></select>
-          </label>
-          <button id="basemap-toggle" class="control" type="button" aria-pressed="true">
-            <span data-i18n="basemapToggle"></span>
-            <span id="basemap-state" class="control__state"></span>
-          </button>
-          <button id="modern-hold" class="control control--hold" type="button" data-i18n="modernHold"></button>
-          <button id="reset-world" class="control" type="button" data-i18n="resetWorld"></button>
-          <button id="reset-view" class="control" type="button" data-i18n="resetView"></button>
+          <div class="topbar__views" role="group">
+            <button id="reset-world" class="control" type="button" data-i18n="resetWorld"></button>
+            <button id="reset-view" class="control" type="button" data-i18n="resetView"></button>
+            <button id="modern-hold" class="control control--hold" type="button" data-i18n="modernHold"></button>
+          </div>
         </div>
+
+        <label class="control control--select topbar__lang">
+          <span id="language-label" class="control__state"></span>
+          <select id="language-select" class="control__select"></select>
+        </label>
       </header>
 
       <main class="stage">
@@ -43,8 +58,35 @@
 
         <div id="status" class="status" role="status" aria-live="polite" hidden></div>
 
-        <aside id="legend" class="legend">
-          <h2 class="legend__title" data-i18n="legendHeading"></h2>
+        <div class="overlays">
+          <div id="layers" class="layers" role="group" data-i18n-aria="layersLabel">
+            <button id="events-toggle" class="chip" type="button" aria-pressed="false" hidden></button>
+            <button id="facts-toggle" class="chip" type="button" aria-pressed="false" hidden></button>
+            <button id="labels-toggle" class="chip" type="button" aria-pressed="true" hidden>
+              <span data-i18n="labelsToggle"></span>
+            </button>
+            <button id="basemap-toggle" class="chip" type="button" aria-pressed="true">
+              <span data-i18n="basemapToggle"></span>
+            </button>
+          </div>
+          <aside id="facts" class="facts" data-i18n-aria="factsAriaLabel" hidden></aside>
+        </div>
+
+        <button
+          id="help-toggle"
+          class="help-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="legend"
+          data-i18n-aria="helpToggle"
+        >
+          ?
+        </button>
+        <aside id="legend" class="legend" hidden>
+          <div class="legend__head">
+            <h2 class="legend__title" data-i18n="legendHeading"></h2>
+            <button id="help-close" class="legend__close" type="button" data-i18n-aria="helpClose">×</button>
+          </div>
           <p class="legend__note" data-i18n="legendColorNote"></p>
           <ul class="legend__list">
             <li class="legend__item">
@@ -57,6 +99,9 @@
             </li>
           </ul>
           <p id="basemap-hint" class="legend__note legend__note--hint" hidden></p>
+          <h3 class="legend__subtitle" data-i18n="helpStartHeading"></h3>
+          <ol id="help-steps" class="legend__steps"></ol>
+          <button id="help-ok" class="control legend__ok" type="button" data-i18n="disclaimerDismiss"></button>
         </aside>
 
         <aside
@@ -65,8 +110,6 @@
           aria-hidden="true"
           data-i18n-aria="panelAriaLabel"
         ></aside>
-
-        <aside id="facts" class="facts" data-i18n-aria="factsAriaLabel" hidden></aside>
       </main>
 
       <section
@@ -148,22 +191,8 @@
             />
             <datalist id="year-jump-options"></datalist>
           </form>
-          <span id="timeline-position" class="timeline__position"></span>
+          <span id="timeline-neighbours" class="timeline__neighbours"></span>
           <span id="timeline-features" class="timeline__features"></span>
-          <button
-            id="facts-toggle"
-            class="control control--facts"
-            type="button"
-            aria-pressed="false"
-            hidden
-          ></button>
-          <button
-            id="events-toggle"
-            class="control control--facts"
-            type="button"
-            aria-pressed="false"
-            hidden
-          ></button>
         </div>
 
         <div class="timeline__controls">
@@ -183,8 +212,14 @@
           <span data-i18n="timelineNote"></span>
         </p>
       </section>
+    </div>
 
-      <footer class="footer">
+    <!--
+      Outside .app on purpose: the app box fills the viewport exactly (header,
+      map, chapters, timeline), so the map takes every pixel left over and the
+      footer starts below the fold.
+    -->
+    <footer class="footer">
         <div class="footer__column">
           <h2 class="footer__heading" data-i18n="footerDataHeading"></h2>
           <p>
@@ -214,6 +249,7 @@
           <p data-i18n="footerBasemapAttribution"></p>
           <h2 class="footer__heading footer__heading--spaced" data-i18n="footerRendererHeading"></h2>
           <p class="footer__muted" data-i18n="footerRenderer"></p>
+          <p class="footer__muted" data-i18n="footerFontsAttribution"></p>
         </div>
 
         <div class="footer__column footer__column--wide">
@@ -223,7 +259,6 @@
           <p class="footer__muted" data-i18n="footerLanguageNote"></p>
         </div>
       </footer>
-    </div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

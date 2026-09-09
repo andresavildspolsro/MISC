@@ -49,11 +49,37 @@ export const en: Strings = {
   nearestSnapshotShown: (requested, shown) =>
     `The dataset has no snapshot for ${requested}; showing the nearest one (${shown}).`,
 
-  basemapToggle: 'Modern basemap',
-  basemapOn: 'on',
-  basemapOff: 'off',
+  layersLabel: 'Layers',
+  labelsToggle: 'Names',
+  basemapToggle: 'Today’s coastlines',
   basemapHintAncient:
     'The basemap is off by default before AD 1000: modern coastlines, lakes and rivers differ from ancient ones and can mislead.',
+
+  searchLabel: 'Search',
+  searchPlaceholder: 'Search a territory, event, chapter or year',
+  searchNoResults: 'Nothing found. The search covers dataset names, events and chapters.',
+  searchKindTerritory: 'Territory in this snapshot',
+  searchTerritoryYears: (first, last, count) =>
+    count === 1
+      ? `Territory · in the dataset only in the ${first} snapshot`
+      : `Territory · in the dataset ${first}–${last} (${count} snapshots)`,
+  searchKindEvent: 'Event',
+  searchKindChapter: 'Chapter',
+  searchGoToYear: (year) => `Go to the year ${year}`,
+  searchJumpedToYear: (name, year) =>
+    `“${name}” is not in the previous snapshot; showing ${year}, where it appears.`,
+  searchNotInLoadedSnapshot: (name, year) =>
+    `“${name}” was not found in the loaded ${year} snapshot.`,
+
+  helpToggle: 'Help: reading this map',
+  helpClose: 'Close help',
+  helpStartHeading: 'How to start',
+  helpSteps: [
+    'Move the year on the axis below the map, or click the year and type one.',
+    'Click a territory to open its dataset record.',
+    'Open a chapter below the map and step through its milestones.',
+    'Type a territory, event, chapter or year into the box at the top.',
+  ],
 
   resetView: 'Europe',
   resetViewTitle: 'Reset the view to Europe',
@@ -166,6 +192,8 @@ export const en: Strings = {
   footerBasemapAttribution: 'Coastlines: Natural Earth (public domain), served from this site — no tile provider, no API key',
   footerRendererHeading: 'Rendering',
   footerRenderer: 'Rendered with MapLibre GL JS, licensed BSD-3-Clause.',
+  footerFontsAttribution:
+    'Label typeface: Noto Sans (SIL Open Font License 1.1), served from this site.',
   footerMethodHeading: 'Method',
   footerMethodology:
     'Borders are historical approximations from an open scholarly dataset; precision varies and is displayed per territory. Snapshots are discrete — this site never interpolates between them. How finely the world is subdivided also varies by region and period: outside Europe, territories are typically mapped as much larger units.',

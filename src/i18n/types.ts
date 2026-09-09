@@ -65,10 +65,32 @@ export interface Strings {
    */
   nearestSnapshotShown: (requested: string, shown: string) => string;
 
+  /** Layer toggles drawn over the map. */
+  layersLabel: string;
+  labelsToggle: string;
   basemapToggle: string;
-  basemapOn: string;
-  basemapOff: string;
   basemapHintAncient: string;
+
+  /** Search box in the top bar: territories, events, chapters and years. */
+  searchLabel: string;
+  searchPlaceholder: string;
+  searchNoResults: string;
+  searchKindTerritory: string;
+  /** A name the shown snapshot lacks: say which years the dataset has it in. */
+  searchTerritoryYears: (first: string, last: string, count: number) => string;
+  searchKindEvent: string;
+  searchKindChapter: string;
+  searchGoToYear: (year: string) => string;
+  /** Notice after search moved to another snapshot to show a territory. */
+  searchJumpedToYear: (name: string, year: string) => string;
+  /** The name exists in the index but not in the loaded file: report it. */
+  searchNotInLoadedSnapshot: (name: string, year: string) => string;
+
+  /** The "?" help card: legend plus a short "how to start" list. */
+  helpToggle: string;
+  helpClose: string;
+  helpStartHeading: string;
+  helpSteps: string[];
 
   resetView: string;
   resetViewTitle: string;
@@ -166,6 +188,7 @@ export interface Strings {
   footerBasemapAttribution: string;
   footerRendererHeading: string;
   footerRenderer: string;
+  footerFontsAttribution: string;
   footerMethodHeading: string;
   footerMethodology: string;
   footerSimplified: (tolerance: string) => string;

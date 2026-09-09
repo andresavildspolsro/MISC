@@ -37,3 +37,25 @@ export function featureContains(
   }
   return false;
 }
+
+export type Bbox = [[number, number], [number, number]];
+
+/** Bounding box of a ring list as [[west, south], [east, north]]. */
+export function ringsBbox(rings: Ring[]): Bbox {
+  let west = Infinity;
+  let south = Infinity;
+  let east = -Infinity;
+  let north = -Infinity;
+  for (const ring of rings) {
+    for (const [x, y] of ring) {
+      if (x < west) west = x;
+      if (x > east) east = x;
+      if (y < south) south = y;
+      if (y > north) north = y;
+    }
+  }
+  return [
+    [west, south],
+    [east, north],
+  ];
+}

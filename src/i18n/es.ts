@@ -49,11 +49,37 @@ export const es: Strings = {
   nearestSnapshotShown: (requested, shown) =>
     `El conjunto de datos no tiene instantánea de ${requested}; se muestra la más cercana (${shown}).`,
 
-  basemapToggle: 'Mapa base moderno',
-  basemapOn: 'activo',
-  basemapOff: 'inactivo',
+  layersLabel: 'Capas',
+  labelsToggle: 'Nombres',
+  basemapToggle: 'Costas actuales',
   basemapHintAncient:
     'Antes del año 1000 d. C. el mapa base está desactivado por defecto: las costas, los lagos y los ríos actuales difieren de los antiguos y pueden inducir a error.',
+
+  searchLabel: 'Buscar',
+  searchPlaceholder: 'Buscar un territorio, evento, capítulo o año',
+  searchNoResults: 'No se encontró nada. La búsqueda cubre los nombres del conjunto de datos, los eventos y los capítulos.',
+  searchKindTerritory: 'Territorio en esta instantánea',
+  searchTerritoryYears: (first, last, count) =>
+    count === 1
+      ? `Territorio · en el conjunto de datos solo en la instantánea de ${first}`
+      : `Territorio · en el conjunto de datos ${first}–${last} (${count} instantáneas)`,
+  searchKindEvent: 'Evento',
+  searchKindChapter: 'Capítulo',
+  searchGoToYear: (year) => `Ir al año ${year}`,
+  searchJumpedToYear: (name, year) =>
+    `«${name}» no está en la instantánea anterior; se muestra ${year}, donde aparece.`,
+  searchNotInLoadedSnapshot: (name, year) =>
+    `«${name}» no se encontró en la instantánea cargada de ${year}.`,
+
+  helpToggle: 'Ayuda: cómo leer este mapa',
+  helpClose: 'Cerrar la ayuda',
+  helpStartHeading: 'Cómo empezar',
+  helpSteps: [
+    'Mueve el año en el eje bajo el mapa, o haz clic en el año y escribe uno.',
+    'Haz clic en un territorio para abrir su registro del conjunto de datos.',
+    'Abre un capítulo bajo el mapa y recorre sus hitos.',
+    'Escribe un territorio, evento, capítulo o año en el cuadro superior.',
+  ],
 
   resetView: 'Europa',
   resetViewTitle: 'Restablecer la vista a Europa',
@@ -167,6 +193,8 @@ export const es: Strings = {
   footerBasemapAttribution: 'Costas: Natural Earth (dominio público), servidas desde este sitio, sin proveedor de teselas ni clave de API',
   footerRendererHeading: 'Renderizado',
   footerRenderer: 'Renderizado con MapLibre GL JS, licencia BSD-3-Clause.',
+  footerFontsAttribution:
+    'Tipografía de las etiquetas: Noto Sans (SIL Open Font License 1.1), servida desde este sitio.',
   footerMethodHeading: 'Método',
   footerMethodology:
     'Las fronteras son aproximaciones históricas de un conjunto de datos académico abierto; su precisión varía y se indica en cada territorio. Las instantáneas son discretas: este sitio nunca interpola entre ellas. El grado de subdivisión también varía según la región y el periodo: fuera de Europa, los territorios suelen estar cartografiados como unidades mucho mayores.',

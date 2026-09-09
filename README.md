@@ -20,6 +20,26 @@ displayed as "not in dataset" rather than filled in.
   animates; neighbouring years are prefetched.
 - **Territory colouring** keyed on `SUBJECTO` (falling back to `NAME`) so that
   possessions of the same power share a colour.
+- **Names on the map.** Each named territory carries its dataset `NAME` (or
+  its curated translation, see below) printed inside its own polygon, at the
+  pole of inaccessibility of its largest part so the label sits inside a
+  crescent-shaped country rather than in the sea beside it. Territories are
+  ranked by area into five tiers that switch on with zoom — the world view
+  prints only the largest powers, a zoomed-in Europe its duchies — and
+  MapLibre's collision detection thins the rest, largest first. Glyphs (Noto
+  Sans) are vendored at build time and served from this site, so the labels
+  need no font server; the layer is behind a toggle. Nothing is added: an
+  unnamed territory gets no label, and a label never sits outside the
+  dataset's own shape.
+- **Search.** One box in the top bar finds territories of the shown snapshot,
+  territories the dataset has in *other* years (from a build-time index of
+  every `NAME` and its years — the result says which, e.g. "Prussia · in the
+  dataset 1650–1938"), events, chapters, and a typed year. Diacritics are
+  ignored ("Cechy" finds "Čechy") and curated translations match too. Picking
+  a territory frames it and pins its record; a territory from another year
+  jumps to the nearest snapshot that has it and says so.
+- **Layer chips** on the map — events, facts, names, today's coastlines —
+  replace the toggles that used to hide in the timeline row.
 - **Visible uncertainty.** `BORDERPRECISION` drives fill opacity and outline
   style: borders the dataset records as legally determined are solid, and
   approximate ones are dashed and faded.
@@ -42,6 +62,11 @@ displayed as "not in dataset" rather than filled in.
   rivers under ancient borders mislead.
 - **Pre-1648 banner** noting that fixed national boundaries are anachronistic in
   Europe before the Peace of Westphalia.
+- **A "?" help card** — the legend plus a four-step "how to start" — opens on
+  the first visit and on demand afterwards.
+- **Timeline readout** shows the previous and next snapshot years as step
+  buttons ("‹ 1600 · 1715 ›"), so the size of the coming jump is visible
+  before it is made.
 - **Three languages** — English, Czech and Spanish — switchable from the top bar
   without a reload. Era suffixes, number grouping and the Wikipedia host all
   follow the choice (`1650` / `1650 n. l.` / `1650 d. C.`;
@@ -133,6 +158,7 @@ Attribution appears in the site footer:
 |---|---|
 | Border data | Historical Basemaps, André Ourednik and contributors, GPL-3.0 |
 | Coastlines | Natural Earth v5.1.2, public domain |
+| Label typeface | Noto Sans, SIL Open Font License 1.1 (glyph ranges from `maplibre/demotiles`) |
 | Renderer | MapLibre GL JS, BSD-3-Clause |
 
 ## Getting started
@@ -165,9 +191,17 @@ npm run preview
 6. Downloads the Natural Earth coastline and lake files (110m and 50m) at a
    pinned tag into `public/data/basemap/`. 110m loads with the page (170 kB);
    50m (2.4 MB) is fetched only once the viewer zooms past the world view.
-7. Writes `public/data/manifest.json` — the list of years, filenames, feature
-   counts, byte sizes and the property keys each file actually carries. The app
-   reads only this manifest; it never fetches from GitHub at runtime.
+7. Downloads four Unicode ranges of pre-rasterised Noto Sans glyphs (Latin,
+   Latin Extended, IPA, Greek — 366 kB, fetched by the map range by range as
+   needed) from `maplibre/demotiles` at a pinned commit into
+   `public/data/fonts/`, for the territory labels.
+8. Writes `public/data/names.json` — every `NAME` value in the dataset, verbatim,
+   with the sorted list of snapshot years it appears in (~3 000 names, 100 kB).
+   The search loads it on first use.
+9. Writes `public/data/manifest.json` — the list of years, filenames, feature
+   counts, byte sizes and the property keys each file actually carries, plus
+   the basemap, font and name-index entries. The app reads only this
+   manifest; it never fetches from GitHub at runtime.
 
 `public/data/` is generated and git-ignored (~70 MB). Everything needed to
 reproduce it is in the script.

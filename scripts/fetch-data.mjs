@@ -59,9 +59,30 @@ export const BASEMAP = {
   files: ['ne_110m_land', 'ne_110m_lakes', 'ne_50m_land', 'ne_50m_lakes'],
 };
 
+/**
+ * Glyphs for the territory labels drawn on the map. MapLibre renders text from
+ * pre-rasterised SDF glyph ranges, which are vendored here from the MapLibre
+ * demo-tiles repository at a pinned commit and served from this site — the
+ * same reasoning as the coastlines: no third-party font server at runtime.
+ * Noto Sans is licensed under the SIL Open Font License 1.1.
+ */
+export const FONTS = {
+  owner: 'maplibre',
+  repo: 'demotiles',
+  /** maplibre/demotiles @ gh-pages, pinned. */
+  ref: '601ae60796ceceda2cbd2ed3d2ea92d17a84be4b',
+  /** Directory name upstream (with spaces) and the stack name the style uses. */
+  upstreamStack: 'Noto Sans Regular',
+  stack: 'NotoSans',
+  license: 'SIL Open Font License 1.1 (Noto Sans)',
+  /** Unicode ranges to vendor: Latin, Latin Extended, IPA, Greek. */
+  ranges: ['0-255', '256-511', '512-767', '768-1023'],
+};
+
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const OUT_DIR = path.join(ROOT, 'public', 'data');
 const BASEMAP_DIR = path.join(OUT_DIR, 'basemap');
+const FONTS_DIR = path.join(OUT_DIR, 'fonts');
 const CACHE_DIR = path.join(ROOT, 'node_modules', '.cache', 'historical-basemaps');
 
 /** Default mapshaper tolerance. Conservative: visually lossless at world scale. */
@@ -210,6 +231,50 @@ async function downloadBasemap() {
   };
 }
 
+/* ----------------------------------------------------------------- fonts */
+
+async function downloadFonts() {
+  const dir = path.join(FONTS_DIR, FONTS.stack);
+  await fs.mkdir(dir, { recursive: true });
+  const cacheDir = path.join(CACHE_DIR, 'fonts', FONTS.ref, FONTS.stack);
+  await fs.mkdir(cacheDir, { recursive: true });
+  let bytes = 0;
+
+  for (const range of FONTS.ranges) {
+    const cached = path.join(cacheDir, `${range}.pbf`);
+    let body;
+    try {
+      body = await fs.readFile(cached);
+    } catch {
+      const url =
+        `https://raw.githubusercontent.com/${FONTS.owner}/${FONTS.repo}/${FONTS.ref}/font/` +
+        `${encodeURIComponent(FONTS.upstreamStack)}/${range}.pbf`;
+      const response = await fetch(url, {
+        headers: { 'user-agent': 'historical-world-map build script' },
+      });
+      if (!response.ok) {
+        fail(`glyph download failed for ${FONTS.upstreamStack} ${range}: HTTP ${response.status}`);
+      }
+      body = Buffer.from(await response.arrayBuffer());
+      await fs.writeFile(cached, body);
+    }
+    await fs.writeFile(path.join(dir, `${range}.pbf`), body);
+    bytes += body.length;
+  }
+  log(`fonts ${FONTS.stack}: ${FONTS.ranges.length} ranges, ${(bytes / 1024).toFixed(0)} kB`);
+
+  return {
+    source: `https://github.com/${FONTS.owner}/${FONTS.repo}`,
+    ref: FONTS.ref,
+    license: FONTS.license,
+    stack: FONTS.stack,
+    /** MapLibre glyph URL template, relative to the site root. */
+    template: 'data/fonts/{fontstack}/{range}.pbf',
+    ranges: FONTS.ranges,
+    bytes,
+  };
+}
+
 /* ------------------------------------------------------------------- main */
 
 async function main() {
@@ -253,6 +318,8 @@ async function main() {
   await fs.mkdir(OUT_DIR, { recursive: true });
 
   const snapshots = [];
+  /** NAME -> set of snapshot years the name appears in (for search). */
+  const namesToYears = new Map();
 
   for (const filename of snapshotFiles) {
     const year = parseYearFromFilename(filename);
@@ -289,6 +356,14 @@ async function main() {
       for (const key of Object.keys(feature.properties ?? {})) propertyKeys.add(key);
       const precision = feature.properties?.BORDERPRECISION;
       if (precision !== null && precision !== undefined) borderPrecisions.add(precision);
+      // Verbatim NAME values only — trimmed, never re-spelled — so the search
+      // index can only ever point at names the dataset actually contains.
+      const name = feature.properties?.NAME;
+      if (typeof name === 'string' && name.trim() !== '') {
+        const key = name.trim();
+        if (!namesToYears.has(key)) namesToYears.set(key, new Set());
+        namesToYears.get(key).add(year);
+      }
     }
 
     snapshots.push({
@@ -310,9 +385,26 @@ async function main() {
   if (duplicates.length) fail(`duplicate snapshot years: ${duplicates.join(', ')}`);
 
   const basemap = await downloadBasemap();
+  const fonts = await downloadFonts();
+
+  // Search index: every NAME in the dataset with the years it appears in.
+  const names = {};
+  for (const key of [...namesToYears.keys()].sort((a, b) => a.localeCompare(b, 'en'))) {
+    names[key] = [...namesToYears.get(key)].sort((a, b) => a - b);
+  }
+  const namesJson = JSON.stringify({ generatedFrom: UPSTREAM.commit, names });
+  await fs.writeFile(path.join(OUT_DIR, 'names.json'), `${namesJson}\n`);
+  const nameIndex = {
+    path: 'data/names.json',
+    bytes: Buffer.byteLength(namesJson),
+    count: namesToYears.size,
+  };
+  log(`name index: ${nameIndex.count} names, ${(nameIndex.bytes / 1024).toFixed(0)} kB`);
 
   const manifest = {
     basemap,
+    fonts,
+    nameIndex,
     generatedFrom: {
       repository: `https://github.com/${UPSTREAM.owner}/${UPSTREAM.repo}`,
       commit: UPSTREAM.commit,

@@ -16,9 +16,11 @@ import {
 
 import { PRECISION_KEY, SLOT_KEY } from './data';
 import { palette, ungroupedColor, UNGROUPED_SLOT } from './colors';
+import type { Bbox } from './geo';
+import { TIER_MIN_ZOOMS } from './labels';
 import { glossName } from './nameGlosses';
 import { localeCode, strings } from './strings';
-import type { SnapshotCollection } from './types';
+import type { FontsManifest, SnapshotCollection } from './types';
 
 const SOURCE_ID = 'snapshot';
 const FILL_LAYER = 'territory-fill';
@@ -43,6 +45,9 @@ const SPOT_FILL_LAYER = 'spotlight-fill';
 const SPOT_LINE_LAYER = 'spotlight-line';
 const MODERN_SOURCE = 'modern-source';
 const MODERN_LAYER = 'modern-outline';
+const LABELS_SOURCE = 'labels-source';
+/** One symbol layer per area tier; see src/labels.ts. */
+const LABEL_LAYERS = TIER_MIN_ZOOMS.map((_zoom, tier) => `territory-labels-${tier}`);
 
 /**
  * Colour pairs for chapter sides (light, dark). Purely presentational — a
@@ -96,6 +101,14 @@ export interface BasemapSources {
 }
 
 const EMPTY: SnapshotCollection = { type: 'FeatureCollection', features: [] };
+
+/**
+ * MapLibre resolves a relative glyph URL against the style's own URL, which an
+ * inline style does not have; the template is therefore made absolute here.
+ */
+function absoluteBase(): string {
+  return new URL(import.meta.env.BASE_URL, window.location.href).href;
+}
 
 /**
  * One browser click can fire several MapLibre layer listeners. The event-point
@@ -168,15 +181,20 @@ export class TerritoryMap {
   private spotlightIds: number[] | null = null;
   private modernVisible = false;
 
+  private readonly fonts: FontsManifest | null;
+  private labelsVisible = true;
+
   constructor(
     container: HTMLElement,
     tooltip: HTMLElement,
     callbacks: MapCallbacks,
     basemap: BasemapSources | null,
+    fonts: FontsManifest | null,
   ) {
     this.tooltip = tooltip;
     this.callbacks = callbacks;
     this.basemap = basemap;
+    this.fonts = fonts;
     this.dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     this.map = new MapLibreMap({
@@ -260,8 +278,13 @@ export class TerritoryMap {
   private buildStyle(): StyleSpecification {
     return {
       version: 8,
-      // No glyphs or sprite are declared: this map draws no text, so it needs
-      // neither, and avoids depending on a third-party font server.
+      // Glyphs for the territory labels are vendored at build time and served
+      // from this site (see scripts/fetch-data.mjs); no sprite is needed and
+      // no third-party font server is ever contacted. Without a fonts entry
+      // in the manifest the label layers simply stay empty.
+      ...(this.fonts
+        ? { glyphs: `${absoluteBase()}${this.fonts.template}` }
+        : {}),
       sources: {
         [LAND_SOURCE]: {
           type: 'geojson',
@@ -271,6 +294,7 @@ export class TerritoryMap {
         [LAKES_SOURCE]: { type: 'geojson', data: EMPTY },
         [EVENTS_SOURCE]: { type: 'geojson', data: EMPTY },
         [MODERN_SOURCE]: { type: 'geojson', data: EMPTY, tolerance: 0.15 },
+        [LABELS_SOURCE]: { type: 'geojson', data: EMPTY, generateId: false },
         [SOURCE_ID]: {
           type: 'geojson',
           data: EMPTY,
@@ -441,6 +465,7 @@ export class TerritoryMap {
             'line-opacity': 0.9,
           },
         },
+        ...this.labelLayers(),
         {
           // Today's borders (the newest dataset snapshot), shown only while
           // the hold-to-compare button is pressed.
@@ -473,6 +498,63 @@ export class TerritoryMap {
 
   private waterColor(): string {
     return this.dark ? '#0f1418' : '#d9e3ea';
+  }
+
+  /**
+   * Territory name labels, one symbol layer per area tier so that the world
+   * view prints only the largest powers and each zoom step reveals the next
+   * tier. Bigger territories sort first, so where two labels collide the
+   * larger one wins. Nothing here is drawn when no glyphs are configured.
+   */
+  private labelLayers(): StyleSpecification['layers'] {
+    if (!this.fonts) return [];
+    const stack = this.fonts.stack;
+    return LABEL_LAYERS.map((id, tier) => ({
+      id,
+      type: 'symbol' as const,
+      source: LABELS_SOURCE,
+      minzoom: TIER_MIN_ZOOMS[tier],
+      filter: ['==', ['get', 'tier'], tier],
+      layout: {
+        'text-field': ['get', 'label'],
+        'text-font': [stack],
+        'text-size': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0,
+          ['-', 13, ['*', tier, 0.8]],
+          4,
+          ['-', 15, ['*', tier, 0.8]],
+          8,
+          ['-', 18, ['*', tier, 0.8]],
+        ] as unknown as ExpressionSpecification,
+        'text-max-width': 7,
+        'text-line-height': 1.1,
+        'text-letter-spacing': 0.02,
+        'text-padding': 6,
+        'text-anchor': 'center',
+        'text-allow-overlap': false,
+        'text-ignore-placement': false,
+        'symbol-sort-key': ['get', 'rank'],
+        visibility: this.labelsVisible ? 'visible' : 'none',
+      },
+      paint: {
+        'text-color': this.labelColor(),
+        'text-halo-color': this.labelHaloColor(),
+        'text-halo-width': 1.3,
+        'text-halo-blur': 0.4,
+        'text-opacity': 1,
+      },
+    }));
+  }
+
+  private labelColor(): string {
+    return this.dark ? '#f1efe6' : '#23221d';
+  }
+
+  private labelHaloColor(): string {
+    return this.dark ? 'rgba(20, 20, 18, 0.85)' : 'rgba(255, 255, 253, 0.85)';
   }
 
   /**
@@ -783,8 +865,68 @@ export class TerritoryMap {
     this.map.setPaintProperty(SPOT_FILL_LAYER, 'fill-color', this.fillColorExpression());
     this.map.setPaintProperty(SPOT_LINE_LAYER, 'line-color', dark ? '#f4f3ee' : '#14140f');
     this.map.setPaintProperty(MODERN_LAYER, 'line-color', dark ? '#f4f3ee' : '#14140f');
+    for (const layer of this.presentLabelLayers()) {
+      this.map.setPaintProperty(layer, 'text-color', this.labelColor());
+      this.map.setPaintProperty(layer, 'text-halo-color', this.labelHaloColor());
+    }
     this.applySides();
     this.applySpotlight();
+  }
+
+  /* ------------------------------------------------------------- labels */
+
+  private presentLabelLayers(): string[] {
+    return this.fonts ? LABEL_LAYERS : [];
+  }
+
+  /** Points with a `label`, `tier` and `rank` each; see src/labels.ts. */
+  setLabelsData(collection: GeoJSON.FeatureCollection): void {
+    if (!this.ready) {
+      this.map.once('style.load', () => this.setLabelsData(collection));
+      return;
+    }
+    (this.map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(collection);
+  }
+
+  clearLabelsData(): void {
+    this.setLabelsData(EMPTY as GeoJSON.FeatureCollection);
+  }
+
+  setLabelsVisible(visible: boolean): void {
+    this.labelsVisible = visible;
+    if (!this.ready) return;
+    for (const layer of this.presentLabelLayers()) {
+      this.map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
+    }
+  }
+
+  isLabelsVisible(): boolean {
+    return this.labelsVisible;
+  }
+
+  /** Whether labels can be drawn at all (glyphs were vendored at build time). */
+  hasLabels(): boolean {
+    return this.fonts !== null;
+  }
+
+  /* --------------------------------------------------------- navigation */
+
+  /** Frames a territory's bounding box, e.g. from a search result. */
+  flyToBounds(bounds: Bbox): void {
+    this.map.fitBounds(bounds, { padding: 60, duration: 700, maxZoom: 6 });
+  }
+
+  /**
+   * Brings a point into view at a readable zoom, e.g. an event from search.
+   * The point lands a little below centre so the popup above it has room.
+   */
+  flyToPoint(at: LngLatLike, zoom = 4.5): void {
+    this.map.flyTo({
+      center: at,
+      zoom: Math.max(this.map.getZoom(), zoom),
+      offset: [0, 90],
+      duration: 700,
+    });
   }
 
   /* ------------------------------------------------- chapter sides tint */
@@ -874,6 +1016,9 @@ export class TerritoryMap {
       this.map.setPaintProperty(LAND_LAYER, 'fill-color', this.dark ? '#26261f' : '#efede7');
       this.map.setPaintProperty(LAKES_LAYER, 'fill-color', this.waterColor());
       this.map.setPaintProperty(COAST_LAYER, 'line-color', this.dark ? '#43423b' : '#c2bfb6');
+      for (const layer of this.presentLabelLayers()) {
+        this.map.setPaintProperty(layer, 'text-opacity', 1);
+      }
       return;
     }
 
@@ -901,6 +1046,15 @@ export class TerritoryMap {
     this.map.setPaintProperty(LAND_LAYER, 'fill-color', muteLand);
     this.map.setPaintProperty(LAKES_LAYER, 'fill-color', muteWater);
     this.map.setPaintProperty(COAST_LAYER, 'line-color', muteLine);
+    // Label points share the territory's feature id, so the same test applies.
+    for (const layer of this.presentLabelLayers()) {
+      this.map.setPaintProperty(layer, 'text-opacity', [
+        'case',
+        inSpot,
+        1,
+        0.3,
+      ] as unknown as ExpressionSpecification);
+    }
   }
 
   hasSpotlight(): boolean {

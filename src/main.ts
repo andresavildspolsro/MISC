@@ -19,8 +19,12 @@ import { FACTS, factsForYear } from './facts';
 import { FactsCard } from './factsCard';
 import { formatCount, formatYear, formatYearShort } from './format';
 import { featureContains } from './geo';
+import { glossName } from './nameGlosses';
+import { labelsFeatureCollection, territoryLabels, type TerritoryLabel } from './labels';
 import { TerritoryMap } from './map';
+import { loadNameIndex, type NameIndex } from './nameIndex';
 import { DetailPanel } from './panel';
+import { fold, matchScore, SearchBox, type SearchResult } from './search';
 import {
   LOCALE_CODES,
   LOCALES,
@@ -50,6 +54,11 @@ const BASEMAP_AUTO_HIDE_BEFORE = 1000;
 const DISCLAIMER_DISMISSED_KEY = 'historical-map:disclaimer-dismissed';
 const FACTS_OPEN_KEY = 'historical-map:facts-open';
 const EVENTS_OPEN_KEY = 'historical-map:events-open';
+const LABELS_OPEN_KEY = 'historical-map:labels-open';
+const HELP_SEEN_KEY = 'historical-map:help-seen';
+
+/** Most results the search list shows; it is a shortlist, not a directory. */
+const SEARCH_LIMIT = 10;
 
 /**
  * Grace period before a hover preview closes after the pointer leaves the map.
@@ -125,8 +134,16 @@ class App {
   private readonly featuresNode = requireElement('#timeline-features');
   private readonly disclaimerNode = requireElement('#disclaimer');
   private readonly basemapButton = requireElement<HTMLButtonElement>('#basemap-toggle');
-  private readonly basemapStateNode = requireElement('#basemap-state');
   private readonly basemapHintNode = requireElement('#basemap-hint');
+  private readonly labelsToggle = requireElement<HTMLButtonElement>('#labels-toggle');
+  private labelsOpen = true;
+  private readonly helpToggle = requireElement<HTMLButtonElement>('#help-toggle');
+  private readonly legendNode = requireElement<HTMLElement>('#legend');
+  private readonly search: SearchBox;
+  /** Loaded on the first search; null until then. */
+  private nameIndex: NameIndex | null = null;
+  /** One-shot continuation once the next snapshot has loaded (search jumps). */
+  private afterLoad: (() => void) | null = null;
   private readonly languageSelect = requireElement<HTMLSelectElement>('#language-select');
   private readonly languageLabelNode = requireElement('#language-label');
   private readonly factsToggle = requireElement<HTMLButtonElement>('#facts-toggle');
@@ -190,7 +207,14 @@ class App {
       // A stale cached manifest may predate the vendored basemap. The map
       // must come up without it rather than dying in the constructor.
       resolveBasemapSources(manifest),
+      manifest.fonts ?? null,
     );
+
+    this.search = new SearchBox(requireElement<HTMLFormElement>('#search'), {
+      query: (text) => this.searchQuery(text),
+      pick: (result) => this.searchPick(result),
+      onFocus: () => void this.ensureNameIndex(),
+    });
 
     this.panel = new DetailPanel(requireElement('#panel'), () => this.clearSelection());
 
@@ -277,6 +301,41 @@ class App {
       this.basemapManual = true;
       this.setBasemap(!this.map.isBasemapVisible());
     });
+
+    // Territory names on the map. Only offered when glyphs were vendored.
+    if (this.map.hasLabels()) {
+      this.labelsToggle.hidden = false;
+      try {
+        const stored = window.localStorage.getItem(LABELS_OPEN_KEY);
+        if (stored !== null) this.labelsOpen = stored === '1';
+      } catch {
+        /* default stays on */
+      }
+      this.applyLabelsToggle();
+      this.labelsToggle.addEventListener('click', () => {
+        this.labelsOpen = !this.labelsOpen;
+        try {
+          window.localStorage.setItem(LABELS_OPEN_KEY, this.labelsOpen ? '1' : '0');
+        } catch {
+          /* fine */
+        }
+        this.applyLabelsToggle();
+      });
+    }
+
+    // The help card: legend plus "how to start". Open on the first visit,
+    // a small "?" button afterwards.
+    this.renderHelpSteps();
+    let helpSeen = false;
+    try {
+      helpSeen = window.localStorage.getItem(HELP_SEEN_KEY) === '1';
+    } catch {
+      /* show it */
+    }
+    this.setHelpOpen(!helpSeen);
+    this.helpToggle.addEventListener('click', () => this.setHelpOpen(this.legendNode.hidden === true));
+    requireElement('#help-close').addEventListener('click', () => this.setHelpOpen(false));
+    requireElement('#help-ok').addEventListener('click', () => this.setHelpOpen(false));
 
     requireElement('#reset-view').addEventListener('click', () => this.map.resetView());
     requireElement('#reset-world').addEventListener('click', () => this.map.resetWorldView());
@@ -456,6 +515,9 @@ class App {
     this.renderChapterChrome();
     this.chapterAxis.retranslate();
     this.applyModernHoldTitle();
+    this.search.retranslate();
+    this.renderHelpSteps();
+    this.publishLabels();
 
     const snapshot = this.snapshots[this.currentIndex];
     this.setBasemap(this.map.isBasemapVisible());
@@ -505,6 +567,9 @@ class App {
   private refreshEvents(): void {
     if (EVENTS.length === 0) return;
     const year = this.snapshots[this.currentIndex].year;
+    // Inside a chapter the points are its milestones and cannot be switched
+    // off, so the toggle would only mislead.
+    this.eventsToggle.hidden = this.activePeriod !== null;
 
     if (this.activePeriod) {
       // Cut-off is the earlier of the shown snapshot and the current milestone:
@@ -877,7 +942,281 @@ class App {
   private setBasemap(visible: boolean): void {
     this.map.setBasemapVisible(visible);
     this.basemapButton.setAttribute('aria-pressed', visible ? 'true' : 'false');
-    this.basemapStateNode.textContent = visible ? strings.basemapOn : strings.basemapOff;
+  }
+
+  private applyLabelsToggle(): void {
+    this.map.setLabelsVisible(this.labelsOpen);
+    this.labelsToggle.setAttribute('aria-pressed', this.labelsOpen ? 'true' : 'false');
+  }
+
+  /* -------------------------------------------------------------- help */
+
+  private setHelpOpen(open: boolean): void {
+    this.legendNode.hidden = !open;
+    this.helpToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!open) {
+      try {
+        window.localStorage.setItem(HELP_SEEN_KEY, '1');
+      } catch {
+        /* it will open again next time; harmless */
+      }
+    }
+  }
+
+  private renderHelpSteps(): void {
+    const list = requireElement('#help-steps');
+    list.innerHTML = '';
+    for (const step of strings.helpSteps) {
+      const item = document.createElement('li');
+      item.textContent = step;
+      list.append(item);
+    }
+  }
+
+  /* ------------------------------------------------------------ labels */
+
+  /**
+   * Publishes name labels for the loaded snapshot. Placement is computed once
+   * per collection (see src/labels.ts) and deferred a tick so the borders
+   * themselves paint first on a dense snapshot.
+   */
+  private publishLabels(): void {
+    if (!this.map.hasLabels()) return;
+    const collection = this.collection;
+    if (!collection) {
+      this.map.clearLabelsData();
+      return;
+    }
+    const token = this.loadToken;
+    window.setTimeout(() => {
+      if (token !== this.loadToken || this.collection !== collection) return;
+      this.map.setLabelsData(labelsFeatureCollection(territoryLabels(collection), localeCode));
+    }, 0);
+  }
+
+  /* ------------------------------------------------------------ search */
+
+  private async ensureNameIndex(): Promise<NameIndex> {
+    if (!this.nameIndex) this.nameIndex = await loadNameIndex(this.manifest);
+    return this.nameIndex;
+  }
+
+  /**
+   * Everything the search can find for a query, best first: a typed year,
+   * territories of the shown snapshot, chapters, events, then territories the
+   * dataset only has in other years. Names are matched both verbatim and via
+   * their curated translation, diacritics ignored.
+   */
+  private async searchQuery(text: string): Promise<SearchResult[]> {
+    const q = fold(text);
+    if (!q) return [];
+    const index = await this.ensureNameIndex();
+    const currentYear = this.snapshots[this.currentIndex].year;
+
+    type Scored = { score: number; priority: number; result: SearchResult };
+    const scored: Scored[] = [];
+
+    const yearMatch = /^(-?\d{1,6})$/.exec(text.trim());
+    if (yearMatch) {
+      const year = Number(yearMatch[1]);
+      scored.push({
+        score: 4,
+        priority: 0,
+        result: {
+          kind: 'year',
+          year,
+          label: strings.searchGoToYear(formatYear(year)),
+          meta: '',
+        },
+      });
+    }
+
+    // Territories of the shown snapshot: one result per name, largest first.
+    const seen = new Set<string>();
+    const labels = this.collection ? territoryLabels(this.collection) : [];
+    for (const label of labels) {
+      if (seen.has(label.name)) continue;
+      const gloss = glossName(label.name, localeCode);
+      const score = Math.max(matchScore(label.name, q), gloss ? matchScore(gloss, q) : 0);
+      if (score === 0) continue;
+      seen.add(label.name);
+      scored.push({
+        score,
+        priority: 1,
+        result: {
+          kind: 'territory',
+          name: label.name,
+          featureIndex: label.index,
+          label: gloss ?? label.name,
+          meta: gloss ? label.name : '',
+        },
+      });
+    }
+
+    for (const period of PERIODS) {
+      const score = Math.max(matchScore(period.name[localeCode], q), matchScore(period.name.en, q));
+      if (score === 0) continue;
+      scored.push({
+        score,
+        priority: 2,
+        result: {
+          kind: 'chapter',
+          period,
+          label: period.name[localeCode],
+          meta: this.periodRange(period),
+        },
+      });
+    }
+
+    for (const event of EVENTS) {
+      if (!this.eventsById.has(event.id)) continue;
+      const score = Math.max(matchScore(event.name[localeCode], q), matchScore(event.name.en, q));
+      if (score === 0) continue;
+      scored.push({
+        score,
+        priority: 3,
+        result: {
+          kind: 'event',
+          event,
+          label: event.name[localeCode],
+          meta: formatYear(event.year),
+        },
+      });
+    }
+
+    // Names the dataset has in other years only. Capped separately so a
+    // common word does not bury the other kinds under hundreds of entries.
+    let otherYears = 0;
+    for (const [name, years] of index) {
+      if (seen.has(name) || name.length < 2) continue;
+      const gloss = glossName(name, localeCode);
+      const score = Math.max(matchScore(name, q), gloss ? matchScore(gloss, q) : 0);
+      if (score === 0) continue;
+      otherYears += 1;
+      if (otherYears > SEARCH_LIMIT) break;
+      scored.push({
+        score,
+        priority: 4,
+        result: {
+          kind: 'territory-years',
+          name,
+          years,
+          label: gloss ?? name,
+          meta: strings.searchTerritoryYears(
+            formatYearShort(years[0]),
+            formatYearShort(years[years.length - 1]),
+            years.length,
+          ),
+        },
+      });
+    }
+
+    scored.sort(
+      (a, b) =>
+        b.score - a.score ||
+        a.priority - b.priority ||
+        a.result.label.length - b.result.label.length ||
+        a.result.label.localeCompare(b.result.label, strings.localeTag),
+    );
+    void currentYear;
+    return scored.slice(0, SEARCH_LIMIT).map((entry) => entry.result);
+  }
+
+  private searchPick(result: SearchResult): void {
+    // Whatever was open belongs to the previous question.
+    this.map.closePopup();
+    switch (result.kind) {
+      case 'year':
+        if (this.activePeriod) this.exitChapter();
+        this.timeline.jumpToYear(result.year);
+        return;
+
+      case 'chapter':
+        this.enterChapter(result.period);
+        return;
+
+      case 'territory': {
+        if (this.activePeriod) this.exitChapter();
+        const label = this.labelFor(result.featureIndex);
+        this.map.select(result.featureIndex);
+        this.handleSelect(result.featureIndex);
+        if (label) this.map.flyToBounds(label.bbox);
+        return;
+      }
+
+      case 'territory-years': {
+        if (this.activePeriod) this.exitChapter();
+        // The snapshot nearest to the one shown, so the jump is as small as
+        // the dataset allows; ties go to the later year.
+        const currentYear = this.snapshots[this.currentIndex].year;
+        let bestYear = result.years[0];
+        for (const year of result.years) {
+          if (Math.abs(year - currentYear) <= Math.abs(bestYear - currentYear)) bestYear = year;
+        }
+        const index = this.snapshots.findIndex((snapshot) => snapshot.year === bestYear);
+        if (index === -1) return;
+        const name = result.name;
+        this.afterLoad = () => {
+          const found = this.collection
+            ? territoryLabels(this.collection).find((label) => label.name === name)
+            : undefined;
+          if (!found) {
+            this.showTransient(strings.searchNotInLoadedSnapshot(result.label, formatYear(bestYear)));
+            return;
+          }
+          this.map.select(found.index);
+          this.handleSelect(found.index);
+          this.map.flyToBounds(found.bbox);
+          this.showTransient(strings.searchJumpedToYear(result.label, formatYear(bestYear)));
+        };
+        if (index === this.currentIndex) {
+          const run = this.afterLoad;
+          this.afterLoad = null;
+          run();
+        } else {
+          this.timeline.setIndex(index);
+        }
+        return;
+      }
+
+      case 'event': {
+        if (this.activePeriod) this.exitChapter();
+        const event = result.event;
+        const index = this.snapshots.findIndex((snapshot) => snapshot.year >= event.year);
+        if (index === -1) return;
+        if (!this.eventsOpen) {
+          this.eventsOpen = true;
+          try {
+            window.localStorage.setItem(EVENTS_OPEN_KEY, '1');
+          } catch {
+            /* fine */
+          }
+        }
+        const open = () => {
+          this.map.flyToPoint([event.lon, event.lat]);
+          this.handleEventsClick([event.id], [event.lon, event.lat]);
+        };
+        if (index === this.currentIndex) {
+          this.refreshEvents();
+          open();
+        } else {
+          if (this.snapshots[index].year !== event.year) {
+            this.pendingNotice = strings.eventYearShown(
+              formatYear(event.year),
+              formatYear(this.snapshots[index].year),
+            );
+          }
+          this.afterLoad = open;
+          this.timeline.setIndex(index);
+        }
+        return;
+      }
+    }
+  }
+
+  private labelFor(featureIndex: number): TerritoryLabel | undefined {
+    if (!this.collection) return undefined;
+    return territoryLabels(this.collection).find((label) => label.index === featureIndex);
   }
 
   private setStatus(message: string | null, isError = false): void {
@@ -926,6 +1265,7 @@ class App {
 
       this.collection = collection;
       this.map.setData(collection);
+      this.publishLabels();
       if (this.pendingNotice) {
         this.showTransient(this.pendingNotice);
         this.pendingNotice = null;
@@ -940,6 +1280,8 @@ class App {
       console.error(error);
       this.collection = null;
       this.map.clearData();
+      this.map.clearLabelsData();
+      this.afterLoad = null;
       // No borders are better than borrowed ones: the map goes empty and says so.
       this.setStatus(strings.loadError(formatYear(snapshot.year)), true);
     }
@@ -947,6 +1289,10 @@ class App {
     if (token !== this.loadToken) return;
     prefetchSnapshot(this.snapshots[index - 1]);
     prefetchSnapshot(this.snapshots[index + 1]);
+
+    const continuation = this.afterLoad;
+    this.afterLoad = null;
+    if (continuation && this.collection) continuation();
   }
 
   private updateDisclaimer(year: number): void {

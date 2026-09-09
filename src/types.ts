@@ -25,9 +25,33 @@ export interface BasemapManifest {
   files: Record<string, BasemapFile>;
 }
 
+/** Vendored glyph ranges for the territory labels. */
+export interface FontsManifest {
+  source: string;
+  ref: string;
+  license: string;
+  /** Font-stack name the style refers to (also the directory name). */
+  stack: string;
+  /** MapLibre glyph URL template relative to the site root. */
+  template: string;
+  ranges: string[];
+  bytes: number;
+}
+
+/** Build-time index of every NAME value and the snapshot years it appears in. */
+export interface NameIndexManifest {
+  path: string;
+  bytes: number;
+  count: number;
+}
+
 export interface Manifest {
   /** Absent in manifests produced before the basemap was vendored. */
   basemap?: BasemapManifest;
+  /** Absent in manifests produced before the glyphs were vendored. */
+  fonts?: FontsManifest;
+  /** Absent in manifests produced before the name index existed. */
+  nameIndex?: NameIndexManifest;
   generatedFrom: {
     repository: string;
     commit: string;

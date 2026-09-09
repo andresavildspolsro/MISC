@@ -49,11 +49,38 @@ export const cs: Strings = {
   nearestSnapshotShown: (requested, shown) =>
     `Pro rok ${requested} datová sada snímek nemá; zobrazen nejbližší (${shown}).`,
 
-  basemapToggle: 'Moderní podklad',
-  basemapOn: 'zap.',
-  basemapOff: 'vyp.',
+  layersLabel: 'Vrstvy',
+  labelsToggle: 'Názvy',
+  basemapToggle: 'Dnešní pobřeží',
   basemapHintAncient:
     'Před rokem 1000 n. l. je podklad ve výchozím stavu vypnutý: dnešní pobřeží, jezera a řeky se od dávných liší a mohou být zavádějící.',
+
+  searchLabel: 'Hledat',
+  searchPlaceholder: 'Hledat území, událost, kapitolu nebo rok',
+  searchNoResults: 'Nic nenalezeno. Hledá se v názvech datové sady, v událostech a v kapitolách.',
+  searchKindTerritory: 'Území v tomto snímku',
+  searchTerritoryYears: (first, last, count) => {
+    if (count === 1) return `Území · v datové sadě jen ve snímku ${first}`;
+    const noun = count >= 5 ? 'snímků' : 'snímky';
+    return `Území · v datové sadě ${first}–${last} (${count} ${noun})`;
+  },
+  searchKindEvent: 'Událost',
+  searchKindChapter: 'Kapitola',
+  searchGoToYear: (year) => `Přejít na rok ${year}`,
+  searchJumpedToYear: (name, year) =>
+    `„${name}“ v předchozím snímku není; zobrazen snímek ${year}, kde se vyskytuje.`,
+  searchNotInLoadedSnapshot: (name, year) =>
+    `„${name}“ se v načteném snímku ${year} nenašlo.`,
+
+  helpToggle: 'Nápověda: jak číst mapu',
+  helpClose: 'Zavřít nápovědu',
+  helpStartHeading: 'Jak začít',
+  helpSteps: [
+    'Posuňte rok na ose pod mapou nebo klepněte na letopočet a napište vlastní.',
+    'Klepněte na území: otevře se jeho záznam z datové sady.',
+    'Otevřete kapitolu pod mapou a projděte její milníky.',
+    'Do pole nahoře napište území, událost, kapitolu nebo rok.',
+  ],
 
   resetView: 'Evropa',
   resetViewTitle: 'Vrátit pohled na Evropu',
@@ -166,6 +193,8 @@ export const cs: Strings = {
   footerBasemapAttribution: 'Pobřeží: Natural Earth (volné dílo), servírováno přímo z tohoto webu — bez poskytovatele dlaždic a bez API klíče',
   footerRendererHeading: 'Vykreslování',
   footerRenderer: 'Vykresleno pomocí MapLibre GL JS, licence BSD-3-Clause.',
+  footerFontsAttribution:
+    'Písmo popisků: Noto Sans (SIL Open Font License 1.1), servírováno z tohoto webu.',
   footerMethodHeading: 'Metodika',
   footerMethodology:
     'Hranice jsou historické odhady z otevřené odborné datové sady; jejich přesnost se liší a zobrazuje se u každého území. Snímky jsou nespojité — tento web mezi nimi nikdy neinterpoluje. Podrobnost dělení se navíc liší podle regionu a období: mimo Evropu jsou území zpravidla zakreslena jako mnohem větší celky.',

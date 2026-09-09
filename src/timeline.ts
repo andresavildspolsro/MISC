@@ -44,7 +44,7 @@ export class Timeline {
   private readonly jumpForm: HTMLFormElement;
   private readonly jumpInput: HTMLInputElement;
   private readonly jumpOptions: HTMLDataListElement;
-  private readonly positionNode: HTMLElement;
+  private readonly neighboursNode: HTMLElement;
   private readonly ticksNode: HTMLElement;
   private readonly eventMarksNode: HTMLElement;
   private eventYears: Array<{ year: number; names: string[] }> = [];
@@ -68,7 +68,7 @@ export class Timeline {
     this.jumpForm = root.querySelector<HTMLFormElement>('#year-jump')!;
     this.jumpInput = root.querySelector<HTMLInputElement>('#year-jump-input')!;
     this.jumpOptions = root.querySelector<HTMLDataListElement>('#year-jump-options')!;
-    this.positionNode = root.querySelector<HTMLElement>('#timeline-position')!;
+    this.neighboursNode = root.querySelector<HTMLElement>('#timeline-neighbours')!;
     this.ticksNode = root.querySelector<HTMLElement>('#timeline-ticks')!;
     this.eventMarksNode = root.querySelector<HTMLElement>('#timeline-eventmarks')!;
 
@@ -151,10 +151,17 @@ export class Timeline {
       this.jumpInput.setAttribute('aria-invalid', 'true');
       return;
     }
-    const requested = Number(match[1]);
+    this.closeJump();
+    this.jumpToYear(Number(match[1]));
+  }
 
-    // Exact match jumps silently; anything else lands on the nearest snapshot
-    // and is reported. Ties go to the earlier year.
+  /**
+   * Navigates to a requested year. An exact match jumps silently; anything
+   * else lands on the nearest snapshot and is reported through
+   * `onNearestJump`. Ties go to the earlier year. Also used by the search box.
+   */
+  jumpToYear(requested: number): void {
+    this.stop();
     let best = 0;
     for (let i = 1; i < this.snapshots.length; i += 1) {
       if (
@@ -167,7 +174,6 @@ export class Timeline {
     if (this.snapshots[best].year !== requested) {
       this.callbacks.onNearestJump(requested, best);
     }
-    this.closeJump();
     this.setIndex(best);
   }
 
@@ -341,12 +347,12 @@ export class Timeline {
     const snapshot = this.snapshots[this.index];
     this.slider.value = String(this.index);
     this.slider.setAttribute('aria-valuetext', formatYear(snapshot.year));
+    // Chromium draws no progress fill on a custom track; the stylesheet
+    // paints one from this variable.
+    this.slider.style.setProperty('--fill', `${this.positionOf(this.index)}%`);
 
     this.yearNode.textContent = formatYear(snapshot.year);
-    this.positionNode.textContent = strings.snapshotPosition(
-      formatCount(this.index + 1),
-      formatCount(this.snapshots.length),
-    );
+    this.renderNeighbours();
 
     this.previousButton.disabled = this.index === 0;
     this.nextButton.disabled = this.index === this.snapshots.length - 1;
@@ -354,6 +360,41 @@ export class Timeline {
     for (const tick of this.ticksNode.querySelectorAll<HTMLElement>('.tick')) {
       tick.classList.toggle('tick--active', Number(tick.dataset.index) === this.index);
     }
+  }
+
+  /**
+   * The previous and next snapshot years as small step buttons beside the
+   * readout, so the size of the coming jump is visible before it is made —
+   * "1650 · next 1715" says more than "snapshot 37 of 53".
+   */
+  private renderNeighbours(): void {
+    this.neighboursNode.innerHTML = '';
+    this.neighboursNode.title = strings.snapshotPosition(
+      formatCount(this.index + 1),
+      formatCount(this.snapshots.length),
+    );
+    const make = (offset: -1 | 1) => {
+      const target = this.snapshots[this.index + offset];
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'timeline__neighbour';
+      const label = offset === -1 ? strings.previousSnapshot : strings.nextSnapshot;
+      button.setAttribute('aria-label', label);
+      button.title = label;
+      if (!target) {
+        button.disabled = true;
+        button.textContent = offset === -1 ? '‹ —' : '— ›';
+      } else {
+        button.textContent =
+          offset === -1 ? `‹ ${formatYearShort(target.year)}` : `${formatYearShort(target.year)} ›`;
+        button.addEventListener('click', () => {
+          this.stop();
+          this.setIndex(this.index + offset);
+        });
+      }
+      return button;
+    };
+    this.neighboursNode.append(make(-1), make(1));
   }
 
   setIndex(next: number): void {
