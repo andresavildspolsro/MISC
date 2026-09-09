@@ -53,9 +53,20 @@ export const cs: Strings = {
 
   layersLabel: 'Vrstvy',
   labelsToggle: 'Názvy',
-  basemapToggle: 'Dnešní pobřeží',
+  basemapToggle: 'Dnešní moře a pevnina',
   basemapHintAncient:
     'Před rokem 1000 n. l. je podklad ve výchozím stavu vypnutý: dnešní pobřeží, jezera a řeky se od dávných liší a mohou být zavádějící.',
+
+  layersHelpHeading: 'Vrstvy nad mapou',
+  layerHelpEvents:
+    'Dobové události jako body v mapě. Doplněná vrstva, není součástí datové sady hranic.',
+  layerHelpFacts:
+    'Kartička se zajímavostmi k zobrazenému roku. Doplněný kontext, není součástí datové sady.',
+  layerHelpLabels: 'Názvy území vepsané do mapy. Čím větší přiblížení, tím víc jich je.',
+  layerHelpBasemap:
+    'Obarví moře, pevninu a jezera podle dnešní mapy a dokreslí pobřeží. Vypnuté zůstanou na prázdném podkladu jen území z datové sady. Před rokem 1000 se vypíná samo — dnešní pobřeží k dávným hranicím nesedí.',
+  layerHelpModern:
+    'Přes zobrazený rok se položí obrys dnešních hranic (nejnovější snímek datové sady) pro srovnání.',
 
   searchLabel: 'Hledat',
   searchPlaceholder: 'Hledat území, událost, kapitolu nebo rok',

@@ -56,8 +56,11 @@ displayed as "not in dataset" rather than filled in.
   ignored ("Cechy" finds "Čechy") and curated translations match too. Picking
   a territory frames it and pins its record; a territory from another year
   jumps to the nearest snapshot that has it and says so.
-- **Layer chips** on the map — events, facts, names, today's coastlines —
-  replace the toggles that used to hide in the timeline row.
+- **Layer chips** on the map — events, facts, names, today's sea and land,
+  today's borders — replace the toggles that used to hide in the timeline row.
+  Each one carries a sentence saying what it draws, as its own tooltip and as
+  a "Layers over the map" section of the help card: a chip that only lights up
+  leaves the user guessing what changed.
 - **Visible uncertainty.** `BORDERPRECISION` drives fill opacity and outline
   style: borders the dataset records as legally determined are solid, and
   approximate ones are dashed and faded.
@@ -73,11 +76,14 @@ displayed as "not in dataset" rather than filled in.
   neighbours on a light one.
 - **World by default**, with a one-click Europe view — Europe is where the
   dataset is by far the most finely subdivided.
-- **Self-hosted basemap.** Coastlines and lakes come from Natural Earth,
-  vendored at build time and served from this site — no tile provider and no
-  API key that can stop working. Label-free by construction, and still
-  toggleable; it starts hidden before AD 1000, because modern coastlines and
-  rivers under ancient borders mislead.
+- **Self-hosted basemap** — the "Today's sea and land" chip. Coastlines and
+  lakes come from Natural Earth, vendored at build time and served from this
+  site — no tile provider and no API key that can stop working. Label-free by
+  construction. Switching it off leaves the dataset's own territories on a
+  plain ground, and their fills firm up as they do so, because the same
+  translucency that reads as depth over land reads as a veil over nothing.
+  It starts hidden before AD 1000, because modern coastlines and rivers under
+  ancient borders mislead.
 - **Pre-1648 banner** noting that fixed national boundaries are anachronistic in
   Europe before the Peace of Westphalia.
 - **A "?" help card** — the legend, a four-step "how to start" and the axis

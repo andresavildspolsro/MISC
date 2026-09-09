@@ -616,19 +616,27 @@ export class TerritoryMap {
    * Opacity carries border precision: the less certain the dataset is, the more
    * translucent the territory, so overlapping ancient areas read as overlapping
    * rather than as a hard mosaic.
+   *
+   * With the basemap off there is no land under the fills, and the same
+   * translucency reads as a veil laid over the whole map rather than as
+   * "geography deliberately withheld". Every step is therefore raised while
+   * the basemap is hidden — the precision ordering, which is what the opacity
+   * actually encodes, is preserved.
    */
   private fillOpacityExpression(): ExpressionSpecification {
+    const step = (value: number) =>
+      this.basemapVisible ? value : Math.min(value + 0.17, 0.92);
     return [
       'case',
       ['boolean', ['feature-state', 'hovered'], false],
-      0.85,
+      this.basemapVisible ? 0.85 : 0.92,
       ['==', ['coalesce', ['get', PRECISION_KEY], -1], -1],
-      0.25,
+      step(0.25),
       ['>=', ['get', PRECISION_KEY], 3],
-      0.68,
+      step(0.68),
       ['>=', ['get', PRECISION_KEY], 2],
-      0.55,
-      0.42,
+      step(0.55),
+      step(0.42),
     ] as unknown as ExpressionSpecification;
   }
 
@@ -909,6 +917,7 @@ export class TerritoryMap {
       this.map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
     }
     this.map.setPaintProperty(BACKGROUND_LAYER, 'background-color', this.backgroundColor());
+    this.map.setPaintProperty(FILL_LAYER, 'fill-opacity', this.fillOpacityExpression());
     // An active spotlight owns the background colour; re-mute it.
     this.applySpotlight();
   }

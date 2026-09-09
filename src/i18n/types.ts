@@ -75,6 +75,18 @@ export interface Strings {
   basemapToggle: string;
   basemapHintAncient: string;
 
+  /**
+   * One line per layer chip saying what it draws. Used both as the chip's
+   * own tooltip and as the "Layers" section of the help card, so a chip is
+   * never a switch whose effect has to be guessed.
+   */
+  layersHelpHeading: string;
+  layerHelpEvents: string;
+  layerHelpFacts: string;
+  layerHelpLabels: string;
+  layerHelpBasemap: string;
+  layerHelpModern: string;
+
   /** Search box in the top bar: territories, events, chapters and years. */
   searchLabel: string;
   searchPlaceholder: string;

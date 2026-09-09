@@ -53,7 +53,7 @@ export const es: Strings = {
 
   layersLabel: 'Capas',
   labelsToggle: 'Nombres',
-  basemapToggle: 'Costas actuales',
+  basemapToggle: 'Mar y tierra actuales',
   basemapHintAncient:
     'Antes del año 1000 d. C. el mapa base está desactivado por defecto: las costas, los lagos y los ríos actuales difieren de los antiguos y pueden inducir a error.',
 
@@ -82,6 +82,17 @@ export const es: Strings = {
     'Abre Capítulos en la barra inferior y recorre los hitos de uno de ellos.',
     'Escribe un territorio, evento, capítulo o año en el cuadro superior.',
   ],
+
+  layersHelpHeading: 'Capas sobre el mapa',
+  layerHelpEvents:
+    'Eventos históricos como puntos en el mapa. Es una capa añadida, no forma parte del conjunto de datos de fronteras.',
+  layerHelpFacts:
+    'Una tarjeta de curiosidades para el año en pantalla. Contexto añadido, no forma parte del conjunto de datos.',
+  layerHelpLabels: 'Nombres de los territorios escritos en el mapa. Cuanto más te acercas, más aparecen.',
+  layerHelpBasemap:
+    'Colorea el mar, la tierra y los lagos según el mapa actual y dibuja las costas. Al desactivarla solo quedan los territorios del conjunto de datos sobre un fondo liso. Antes del año 1000 se desactiva sola: las costas actuales no encajan con las fronteras antiguas.',
+  layerHelpModern:
+    'Superpone el contorno de las fronteras actuales (la instantánea más reciente del conjunto de datos) sobre el año en pantalla, para comparar.',
 
   resetView: 'Europa',
   resetViewTitle: 'Restablecer la vista a Europa',

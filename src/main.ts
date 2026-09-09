@@ -458,6 +458,10 @@ class App {
       if (this.pinnedFeatureIndex === null) this.scheduleHoverClose();
     });
 
+    // Last: the layer chips that only appear when their data exists have been
+    // revealed by now, so the help list matches what is actually on screen.
+    this.renderLayersHelp();
+
     window.addEventListener('resize', () => {
       this.map.resize();
       this.updateChromePadding();
@@ -805,6 +809,7 @@ class App {
     this.applyModernToggleTitle();
     this.search.retranslate();
     this.renderHelpSteps();
+    this.renderLayersHelp();
     this.publishLabels();
     void this.refreshChanges(false);
     this.historyToggle.title = strings.historyTitle;
@@ -1289,6 +1294,34 @@ class App {
     for (const step of strings.helpSteps) {
       const item = document.createElement('li');
       item.textContent = step;
+      list.append(item);
+    }
+  }
+
+  /**
+   * What each layer chip draws, in the help card and as the chip's own
+   * tooltip. A chip that only lights up tells the user nothing about what
+   * changed on the map; this says it in words.
+   */
+  private renderLayersHelp(): void {
+    const rows: Array<[HTMLButtonElement, string, string]> = [
+      [this.eventsToggle, strings.eventsToggle, strings.layerHelpEvents],
+      [this.factsToggle, strings.factsToggle, strings.layerHelpFacts],
+      [this.labelsToggle, strings.labelsToggle, strings.layerHelpLabels],
+      [this.basemapButton, strings.basemapToggle, strings.layerHelpBasemap],
+      [this.modernToggle, strings.modernToggle, strings.layerHelpModern],
+    ];
+
+    const list = requireElement('#layers-help');
+    list.innerHTML = '';
+    for (const [chip, name, explanation] of rows) {
+      // The modern-borders chip keeps its own title: it names the snapshot year.
+      if (chip !== this.modernToggle) chip.title = `${name} — ${explanation}`;
+      if (chip.hidden) continue;
+      const item = document.createElement('li');
+      const label = document.createElement('strong');
+      label.textContent = name;
+      item.append(label, document.createTextNode(` — ${explanation}`));
       list.append(item);
     }
   }

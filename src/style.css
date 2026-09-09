@@ -567,6 +567,22 @@ a:hover {
   margin-top: 0.2rem;
 }
 
+.legend__layers {
+  margin: 0;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  list-style: none;
+}
+
+.legend__layers li + li {
+  margin-top: 0.3rem;
+}
+
+.legend__layers strong {
+  color: var(--text-primary);
+}
+
 .legend__steps li::marker {
   color: var(--accent);
   font-weight: 700;

@@ -53,7 +53,7 @@ export const en: Strings = {
 
   layersLabel: 'Layers',
   labelsToggle: 'Names',
-  basemapToggle: 'Today’s coastlines',
+  basemapToggle: 'Today’s sea and land',
   basemapHintAncient:
     'The basemap is off by default before AD 1000: modern coastlines, lakes and rivers differ from ancient ones and can mislead.',
 
@@ -82,6 +82,17 @@ export const en: Strings = {
     'Open Chapters in the bottom bar and step through the milestones of one.',
     'Type a territory, event, chapter or year into the box at the top.',
   ],
+
+  layersHelpHeading: 'Layers over the map',
+  layerHelpEvents:
+    'Historical events as points on the map. An added layer, not part of the border dataset.',
+  layerHelpFacts:
+    'A card of curiosities for the year on screen. Added context, not part of the dataset.',
+  layerHelpLabels: 'Territory names printed on the map. The closer you zoom, the more appear.',
+  layerHelpBasemap:
+    'Colours the sea, land and lakes after today’s map and draws the coastlines. With it off, only the dataset’s territories remain on a plain ground. Before AD 1000 it turns itself off — today’s coastlines do not fit ancient borders.',
+  layerHelpModern:
+    'Lays the outline of today’s borders (the dataset’s newest snapshot) over the year on screen, for comparison.',
 
   resetView: 'Europe',
   resetViewTitle: 'Reset the view to Europe',
