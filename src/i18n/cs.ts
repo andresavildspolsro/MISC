@@ -40,7 +40,9 @@ export const cs: Strings = {
   timelineHelp:
     'Mezi snímky se pohybujte šipkami vlevo a vpravo. Posuvník se zastaví jen na letech, která v datové sadě existují — mezi nimi není nic.',
   timelineNote:
-    'Snímky jsou na této ose rozmístěny rovnoměrně, nikoli úměrně uplynulému času. Mezery mezi nimi sahají od deseti let po desítky tisíciletí.',
+    'Uvnitř každého úseku běží osa lineárně v čase; šířka úseků odpovídá počtu snímků, ne délce jejich trvání. Názvy epoch jsou orientační nálepky, nikoli součást datové sady.',
+  helpAxisHeading: 'Osa',
+  eraNames: ['Pravěk', 'Starověk', 'Středověk', 'Novověk', 'Moderní doba'],
   goToYear: (year) => `Přejít na snímek pro rok ${year}`,
   snapshotPosition: (index, total) => `Snímek ${index} z ${total}`,
 
@@ -78,7 +80,7 @@ export const cs: Strings = {
   helpSteps: [
     'Posuňte rok na ose pod mapou nebo klepněte na letopočet a napište vlastní.',
     'Klepněte na území: otevře se jeho záznam z datové sady.',
-    'Otevřete kapitolu pod mapou a projděte její milníky.',
+    'Otevřete Kapitoly v dolní liště a projděte milníky některé z nich.',
     'Do pole nahoře napište území, událost, kapitolu nebo rok.',
   ],
 
@@ -168,9 +170,15 @@ export const cs: Strings = {
   chapterOpenAria: (name, range) => `Otevřít kapitolu ${name} (${range})`,
   chapterSidesLabel: 'Strany',
 
-  modernHold: 'Dnešek',
-  modernHoldTitle: (snapshotYear) =>
-    `Podržte pro srovnání s dnešními hranicemi (nejnovější snímek datové sady, rok ${snapshotYear})`,
+  modernToggle: 'Dnešní hranice',
+  modernToggleTitle: (snapshotYear) =>
+    `Zobrazit dnešní hranice jako obrys pro srovnání (nejnovější snímek datové sady, rok ${snapshotYear})`,
+
+  chaptersDrawerIntro:
+    'Ohraničená období s milníky na vlastní ose. Hranice na mapě pocházejí vždy z uvedeného snímku datové sady.',
+  chaptersClose: 'Zavřít kapitoly',
+
+  aboutButton: 'O datech',
 
   disclaimerTitle: 'Hranice před rokem 1648 jsou přibližné',
   disclaimerBody:

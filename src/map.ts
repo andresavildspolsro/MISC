@@ -151,6 +151,8 @@ export interface MapCallbacks {
    * pixel moved.
    */
   onHover: (featureIndex: number | null) => void;
+  /** The view settled after a pan or zoom (for the breadcrumb). */
+  onViewChange?: (zoom: number, center: [number, number]) => void;
 }
 
 export class TerritoryMap {
@@ -239,7 +241,9 @@ export class TerritoryMap {
         compact: true,
         customAttribution: BASEMAP_CREDIT,
       }),
-      'bottom-right',
+      // Top right, under the zoom buttons: the bottom edge belongs to the
+      // timeline dock.
+      'top-right',
     );
 
     // Gate on `style.load`, not `load`: `load` also waits for the initial
@@ -264,6 +268,10 @@ export class TerritoryMap {
     });
 
     this.bindInteractions();
+    this.map.on('moveend', () => {
+      const center = this.map.getCenter();
+      this.callbacks.onViewChange?.(this.map.getZoom(), [center.lng, center.lat]);
+    });
 
     // The map fills a flex child whose height settles only after the timeline
     // and footer have laid out; without this the canvas keeps its first,
@@ -809,12 +817,17 @@ export class TerritoryMap {
     // sit on top of the popup that replaces it.
     this.hideTooltip();
     // A milestone can sit outside the current frame (the Dayton Agreement in a
-    // Balkans-framed chapter); an invisible popup would look like nothing
-    // happened, so the map slides over to it.
-    if (!this.map.getBounds().contains(at)) {
-      this.map.panTo(at, { duration: 600 });
+    // Balkans-framed chapter) or under the dock; an invisible popup would look
+    // like nothing happened, so the map slides over to it. The test is done
+    // in pixels against the padded viewport, i.e. the part not covered by
+    // floating chrome.
+    if (!this.isInPaddedView(at)) {
+      this.map.easeTo({ center: at, duration: 600 });
     }
-    this.popup = new Popup({ closeButton: true, maxWidth: '340px', offset: 10 })
+    // Narrower on a phone, so the popup can stay centred on its point instead
+    // of flipping to one side and off the screen.
+    const maxWidth = this.map.getCanvas().clientWidth < 480 ? '250px' : '340px';
+    this.popup = new Popup({ closeButton: true, maxWidth, offset: 10 })
       .setLngLat(at)
       .setDOMContent(content)
       .addTo(this.map);
@@ -824,6 +837,34 @@ export class TerritoryMap {
   closePopup(): void {
     this.popup?.remove();
     this.popup = null;
+  }
+
+  /** Whether a point is inside the part of the canvas not covered by chrome. */
+  private isInPaddedView(at: LngLatLike): boolean {
+    const point = this.map.project(at);
+    const canvas = this.map.getCanvas();
+    const padding = this.map.getPadding();
+    const margin = 24;
+    return (
+      point.x >= (padding.left ?? 0) + margin &&
+      point.x <= canvas.clientWidth - (padding.right ?? 0) - margin &&
+      point.y >= (padding.top ?? 0) + margin &&
+      point.y <= canvas.clientHeight - (padding.bottom ?? 0) - margin
+    );
+  }
+
+  /**
+   * Tells the camera how much of the canvas the floating chrome covers, so
+   * framing (world, Europe, a chapter) and "slide over to it" both aim at the
+   * visible part of the map rather than at the pixels under the dock.
+   */
+  setChromePadding(padding: { top?: number; bottom?: number; left?: number; right?: number }): void {
+    this.map.setPadding({
+      top: padding.top ?? 0,
+      bottom: padding.bottom ?? 0,
+      left: padding.left ?? 0,
+      right: padding.right ?? 0,
+    });
   }
 
   setBasemapVisible(visible: boolean): void {

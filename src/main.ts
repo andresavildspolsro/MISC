@@ -21,7 +21,7 @@ import { formatCount, formatYear, formatYearShort } from './format';
 import { featureContains } from './geo';
 import { glossName } from './nameGlosses';
 import { labelsFeatureCollection, territoryLabels, type TerritoryLabel } from './labels';
-import { TerritoryMap } from './map';
+import { EUROPE_BOUNDS, TerritoryMap } from './map';
 import { loadNameIndex, type NameIndex } from './nameIndex';
 import { DetailPanel } from './panel';
 import { fold, matchScore, SearchBox, type SearchResult } from './search';
@@ -156,22 +156,25 @@ class App {
   /** The layer defaults to on — the points are the reason the map is fun. */
   private eventsOpen = true;
 
-  private readonly chaptersNode = requireElement('#chapters');
-  private readonly chaptersStripNode = requireElement('#chapters-strip');
+  private readonly chaptersDrawer = requireElement<HTMLElement>('#chapters');
   private readonly chapterNode = requireElement('#chapter');
   private readonly timelineNode = requireElement('#timeline');
   private readonly chapterAxis: ChapterAxis;
   private activePeriod: Period | null = null;
   private periodMilestones: HistEvent[] = [];
-  /** Category shown in the chapter strip; a chapter's own category on exit. */
-  private chaptersCategory: PeriodCategory = 'war';
   /** Milestones resolved once at start-up so broken references warn early. */
   private readonly milestonesByPeriod = new Map<string, HistEvent[]>();
 
-  /** Hold-to-compare overlay of the newest snapshot's borders. */
-  private readonly modernHoldButton = requireElement<HTMLButtonElement>('#modern-hold');
+  /** Toggle overlay of the newest snapshot's borders, for comparison. */
+  private readonly modernToggle = requireElement<HTMLButtonElement>('#modern-toggle');
+  private modernOn = false;
   private modernRequested = false;
-  private modernPressed = false;
+
+  private readonly aboutDialog = requireElement<HTMLDialogElement>('#about');
+  private readonly worldCrumb = requireElement<HTMLButtonElement>('#reset-world');
+  private readonly europeCrumb = requireElement<HTMLButtonElement>('#reset-view');
+  /** Narrow screens get a bottom sheet instead of map popups. */
+  private readonly narrow = window.matchMedia('(max-width: 700px)');
 
   private collection: SnapshotCollection | null = null;
   private currentIndex = 0;
@@ -203,6 +206,7 @@ class App {
         onHover: (index) => this.handleHover(index),
         onEventsClick: (ids, at) => this.handleEventsClick(ids, at),
         onPopupClose: () => this.map.setSpotlight(null),
+        onViewChange: (zoom, center) => this.updateBreadcrumb(zoom, center),
       },
       // A stale cached manifest may predate the vendored basemap. The map
       // must come up without it rather than dying in the constructor.
@@ -254,7 +258,7 @@ class App {
     this.bindChrome();
     this.applyViewButtonTitles();
     this.renderFooter();
-    this.renderChaptersStrip();
+    this.renderChaptersDrawer();
     this.languageLabelNode.textContent = strings.languageLabel;
 
     this.timeline.setIndex(initialIndex);
@@ -398,7 +402,20 @@ class App {
       this.publishEventMarks();
     }
 
-    this.bindModernHold();
+    this.bindModernToggle();
+
+    requireElement('#chapters-open').addEventListener('click', () => this.setChaptersOpen(true));
+    requireElement('#chapters-close').addEventListener('click', () => this.setChaptersOpen(false));
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !this.chaptersDrawer.hidden) this.setChaptersOpen(false);
+    });
+
+    requireElement('#about-open').addEventListener('click', () => this.aboutDialog.showModal());
+    requireElement('#about-close').addEventListener('click', () => this.aboutDialog.close());
+    // A click on the backdrop (outside the dialog box) closes it too.
+    this.aboutDialog.addEventListener('click', (event) => {
+      if (event.target === this.aboutDialog) this.aboutDialog.close();
+    });
 
     requireElement('#chapter-exit').addEventListener('click', () => this.exitChapter());
     requireElement<HTMLButtonElement>('#chapter-prestate').addEventListener('click', () => {
@@ -419,69 +436,82 @@ class App {
       if (this.pinnedFeatureIndex === null) this.scheduleHoverClose();
     });
 
-    window.addEventListener('resize', () => this.map.resize());
+    window.addEventListener('resize', () => {
+      this.map.resize();
+      this.updateChromePadding();
+    });
+    this.updateChromePadding();
   }
 
   /**
-   * The "Today" button: while held, today's borders — the newest snapshot of
-   * the same dataset — overlay the map as an outline for comparison. The
-   * snapshot is fetched on the first press, not at start-up.
+   * The dock (or the chapter card) covers the foot of the map; the camera is
+   * told so, and re-told whenever the covering element changes.
    */
-  private bindModernHold(): void {
-    this.applyModernHoldTitle();
-
-    const press = () => {
-      if (this.modernPressed) return;
-      this.modernPressed = true;
-      if (!this.modernRequested) {
-        this.modernRequested = true;
-        void loadSnapshot(this.snapshots[this.snapshots.length - 1])
-          .then((collection) => {
-            this.map.setModernData(collection);
-            if (this.modernPressed) this.map.setModernVisible(true);
-          })
-          .catch((error) => {
-            console.error(error);
-            this.modernRequested = false; // let a later press retry
-          });
-        return;
-      }
-      this.map.setModernVisible(true);
-    };
-    const release = () => {
-      if (!this.modernPressed) return;
-      this.modernPressed = false;
-      this.map.setModernVisible(false);
-    };
-
-    const button = this.modernHoldButton;
-    button.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      button.setPointerCapture(event.pointerId);
-      press();
-    });
-    for (const type of ['pointerup', 'pointercancel'] as const) {
-      button.addEventListener(type, release);
-    }
-    button.addEventListener('keydown', (event) => {
-      if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) {
-        event.preventDefault();
-        press();
-      }
-    });
-    button.addEventListener('keyup', (event) => {
-      if (event.key === ' ' || event.key === 'Enter') release();
-    });
-    button.addEventListener('blur', release);
-    button.addEventListener('contextmenu', (event) => event.preventDefault());
+  private updateChromePadding(): void {
+    const covering = this.activePeriod ? this.chapterNode : this.timelineNode;
+    const bottom = covering.hidden ? 0 : covering.offsetHeight + 12;
+    // The layer chips and facts stack sit top-left; a modest top margin keeps
+    // a centred point from landing under them.
+    this.map.setChromePadding({ bottom, top: 48 });
   }
 
-  private applyModernHoldTitle(): void {
-    const title = strings.modernHoldTitle(
+  /**
+   * The "Today's borders" chip: today's borders — the newest snapshot of the
+   * same dataset — overlay the map as an outline for comparison while the
+   * chip is on. The snapshot is fetched on the first press, not at start-up.
+   */
+  private bindModernToggle(): void {
+    this.applyModernToggleTitle();
+    this.modernToggle.addEventListener('click', () => this.setModern(!this.modernOn));
+  }
+
+  private setModern(on: boolean): void {
+    this.modernOn = on;
+    this.modernToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (!on) {
+      this.map.setModernVisible(false);
+      return;
+    }
+    if (!this.modernRequested) {
+      this.modernRequested = true;
+      void loadSnapshot(this.snapshots[this.snapshots.length - 1])
+        .then((collection) => {
+          this.map.setModernData(collection);
+          if (this.modernOn) this.map.setModernVisible(true);
+        })
+        .catch((error) => {
+          console.error(error);
+          this.modernRequested = false; // let a later press retry
+          this.setModern(false);
+        });
+      return;
+    }
+    this.map.setModernVisible(true);
+  }
+
+  private applyModernToggleTitle(): void {
+    const title = strings.modernToggleTitle(
       formatYear(this.snapshots[this.snapshots.length - 1].year),
     );
-    this.modernHoldButton.title = title;
-    this.modernHoldButton.setAttribute('aria-label', title);
+    this.modernToggle.title = title;
+    this.modernToggle.setAttribute('aria-label', title);
+  }
+
+  /* --------------------------------------------------------- breadcrumb */
+
+  /**
+   * Marks which of the two named views the map is showing, if either: the
+   * world when zoomed right out, Europe when the centre sits inside the
+   * Europe frame at a continental zoom. Anything else is simply "elsewhere"
+   * and neither crumb is current.
+   */
+  private updateBreadcrumb(zoom: number, center: [number, number]): void {
+    const [[west, south], [east, north]] = EUROPE_BOUNDS as [[number, number], [number, number]];
+    const inEurope =
+      zoom >= 2 && center[0] >= west && center[0] <= east && center[1] >= south && center[1] <= north;
+    const world = zoom < 1.6;
+    this.worldCrumb.setAttribute('aria-current', world ? 'true' : 'false');
+    this.europeCrumb.setAttribute('aria-current', inEurope ? 'true' : 'false');
   }
 
   private setLanguage(code: LocaleCode): void {
@@ -511,10 +541,10 @@ class App {
     this.refreshFacts();
     this.refreshEvents();
     this.publishEventMarks();
-    this.renderChaptersStrip();
+    this.renderChaptersDrawer();
     this.renderChapterChrome();
     this.chapterAxis.retranslate();
-    this.applyModernHoldTitle();
+    this.applyModernToggleTitle();
     this.search.retranslate();
     this.renderHelpSteps();
     this.publishLabels();
@@ -613,14 +643,12 @@ class App {
   /* ----------------------------------------------------------- chapters */
 
   /**
-   * Renders the chapter strip: category tabs, then the active category's
-   * chips. Thirty chapters in one flat row would mean a lot of sideways
-   * scrolling, especially on a phone; one category at a time keeps it short.
+   * Renders the chapters drawer: every chapter, grouped by category, each
+   * with its years and one-line description. Opened from the dock.
    */
-  private renderChaptersStrip(): void {
-    const tabsNode = requireElement('#chapters-tabs');
-    tabsNode.innerHTML = '';
-    this.chaptersStripNode.innerHTML = '';
+  private renderChaptersDrawer(): void {
+    const list = requireElement('#chapters-list');
+    list.innerHTML = '';
 
     const categories: Array<{ key: PeriodCategory; label: string }> = [
       { key: 'war', label: strings.chapterCategoryWar },
@@ -633,35 +661,43 @@ class App {
       const periods = PERIODS.filter((period) => period.category === category.key);
       if (periods.length === 0) continue;
 
-      const tab = document.createElement('button');
-      tab.type = 'button';
-      tab.className = 'chapters__tab';
-      tab.setAttribute('role', 'tab');
-      const active = category.key === this.chaptersCategory;
-      tab.setAttribute('aria-selected', active ? 'true' : 'false');
-      tab.classList.toggle('chapters__tab--active', active);
-      tab.textContent = `${category.label} (${periods.length})`;
-      tab.addEventListener('click', () => {
-        this.chaptersCategory = category.key;
-        this.renderChaptersStrip();
-      });
-      tabsNode.append(tab);
-    }
+      const heading = document.createElement('h3');
+      heading.className = 'drawer__group';
+      heading.textContent = `${category.label} (${periods.length})`;
+      list.append(heading);
 
-    for (const period of PERIODS.filter((p) => p.category === this.chaptersCategory)) {
-      const range = this.periodRange(period);
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'chapters__chip';
-      chip.setAttribute('aria-label', strings.chapterOpenAria(period.name[localeCode], range));
-      const name = document.createElement('span');
-      name.textContent = period.name[localeCode];
-      const years = document.createElement('span');
-      years.className = 'chapters__chip-range';
-      years.textContent = range;
-      chip.append(name, years);
-      chip.addEventListener('click', () => this.enterChapter(period));
-      this.chaptersStripNode.append(chip);
+      for (const period of periods) {
+        const range = this.periodRange(period);
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'chapter-item';
+        item.classList.toggle('chapter-item--active', this.activePeriod?.id === period.id);
+        item.setAttribute('aria-label', strings.chapterOpenAria(period.name[localeCode], range));
+        const name = document.createElement('span');
+        name.className = 'chapter-item__name';
+        name.textContent = period.name[localeCode];
+        const years = document.createElement('span');
+        years.className = 'chapter-item__range';
+        years.textContent = range;
+        const desc = document.createElement('span');
+        desc.className = 'chapter-item__desc';
+        desc.textContent = period.description[localeCode];
+        item.append(name, years, desc);
+        item.addEventListener('click', () => {
+          this.setChaptersOpen(false);
+          this.enterChapter(period);
+        });
+        list.append(item);
+      }
+    }
+  }
+
+  private setChaptersOpen(open: boolean): void {
+    this.chaptersDrawer.hidden = !open;
+    requireElement('#chapters-open').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      this.renderChaptersDrawer();
+      this.chaptersDrawer.querySelector<HTMLElement>('.chapter-item--active, .chapter-item')?.focus();
     }
   }
 
@@ -679,14 +715,14 @@ class App {
     this.clearSelection();
     this.activePeriod = period;
     this.periodMilestones = milestones;
-    this.chaptersCategory = period.category;
 
-    this.chaptersNode.hidden = true;
+    this.setChaptersOpen(false);
     this.timelineNode.hidden = true;
     this.chapterNode.hidden = false;
 
     this.renderChapterChrome();
     this.chapterAxis.setPeriod(period, milestones);
+    this.updateChromePadding();
     this.map.focusBounds(period.bounds);
     this.map.setSides(
       period.sides?.map((side) => ({ names: side.territories })) ?? null,
@@ -706,16 +742,15 @@ class App {
     this.periodMilestones = [];
 
     this.chapterNode.hidden = true;
-    this.chaptersNode.hidden = false;
     this.timelineNode.hidden = false;
     this.map.setSides(null);
+    this.updateChromePadding();
 
     const url = new URL(window.location.href);
     url.searchParams.delete('period');
     url.searchParams.delete('m');
     window.history.replaceState(null, '', url);
 
-    this.renderChaptersStrip();
     this.map.closePopup();
     this.refreshEvents();
     this.map.resetWorldView();
@@ -858,7 +893,20 @@ class App {
       item.append(head, body, src);
       root.append(item);
     }
-    this.map.showPopup(at as [number, number], root);
+    if (this.narrow.matches && !this.activePeriod) {
+      // A map popup on a phone is clipped by the edges and hides the map
+      // under it; the bottom sheet reads better and scrolls.
+      this.map.closePopup();
+      this.clearSelection();
+      const title =
+        events.length === 1
+          ? `${formatYear(events[0].year)} — ${events[0].name[localeCode]}`
+          : strings.eventsToggle;
+      this.panel.showCustom(title, root);
+      this.panel.setOpen(true);
+    } else {
+      this.map.showPopup(at as [number, number], root);
+    }
     this.spotlightEvents(events);
   }
 
@@ -1332,6 +1380,7 @@ class App {
 
     this.pinnedFeatureIndex = featureIndex;
     this.previewFeatureIndex = null;
+    this.map.setSpotlight(null);
     this.panel.show(feature, this.snapshots[this.currentIndex], 'pinned');
     this.panel.setOpen(true);
   }
@@ -1363,6 +1412,7 @@ class App {
     this.pinnedFeatureIndex = null;
     this.previewFeatureIndex = null;
     this.map.select(null);
+    this.map.setSpotlight(null);
     this.panel.setOpen(false);
     this.panel.showEmpty();
   }

@@ -52,6 +52,10 @@ export interface Strings {
   timelineHelp: string;
   /** The axis is ordinal, not proportional — say so rather than imply otherwise. */
   timelineNote: string;
+  /** Heading of the axis paragraph in the help card. */
+  helpAxisHeading: string;
+  /** Conventional era labels drawn along the axis, oldest first (five). */
+  eraNames: string[];
   goToYear: (year: string) => string;
   snapshotPosition: (index: string, total: string) => string;
 
@@ -166,8 +170,16 @@ export interface Strings {
   chapterSidesLabel: string;
 
   /** Hold-to-compare overlay of the newest snapshot's borders. */
-  modernHold: string;
-  modernHoldTitle: (snapshotYear: string) => string;
+  /** Toggle chip: today's borders (the newest snapshot) as an outline. */
+  modernToggle: string;
+  modernToggleTitle: (snapshotYear: string) => string;
+
+  /** The chapters drawer. */
+  chaptersDrawerIntro: string;
+  chaptersClose: string;
+
+  /** The "about the data" dialog opened from the top bar. */
+  aboutButton: string;
 
   disclaimerTitle: string;
   disclaimerBody: string;

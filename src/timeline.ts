@@ -3,22 +3,35 @@ import { strings } from './strings';
 import type { ManifestSnapshot } from './types';
 
 /**
- * The time slider.
+ * The time axis in the bottom dock.
  *
- * The control is indexed by *snapshot*, not by year: its value is a position in
- * the manifest, so every stop corresponds one-to-one to a file that exists.
- * There is no interpolation and no synthetic year — a year the dataset does not
- * cover simply cannot be selected.
- *
- * Because the snapshots are unevenly spaced in time (a decade between 1930 and
- * 1938, over a hundred millennia before that) the axis is ordinal. That is
- * stated in the UI rather than left to be misread as a time axis.
+ * The control is still indexed by *snapshot*: every stop corresponds one-to-one
+ * to a file that exists, there is no interpolation and no synthetic year — a
+ * year the dataset does not cover simply cannot be selected. What changed from
+ * the plain ordinal slider is the *placement* of the stops: the axis is cut
+ * into segments at conventional era boundaries, each segment's width follows
+ * the number of snapshots it holds, and inside a segment the stops sit
+ * linearly in time. So 1930, 1938 and 1945 read as close together and 1815
+ * and 1880 as far apart, while antiquity is not crushed into a sliver by the
+ * 123 000 BC snapshot. Era labels are drawn along the top of the track as
+ * orientation only; the help card says all of this in words.
  */
 
 /** Blank space kept between two neighbouring year labels. */
 const TICK_LABEL_GAP_PX = 14;
 
 const PLAY_INTERVAL_MS = 1600;
+
+/**
+ * Interior segment edges (years). The first and last edges are the dataset's
+ * own first and last snapshot. Edges sit where the density of snapshots
+ * changes, so that no segment has to hold both a millennium gap and a decade
+ * gap.
+ */
+const SEGMENT_EDGES = [-10000, -3000, -500, 500, 1500, 1800, 1900, 1945];
+
+/** Era bands drawn above the track: [from, to) in years, index into eraNames. */
+const ERA_EDGES = [-3000, 500, 1500, 1800];
 
 export interface TimelineCallbacks {
   onChange: (index: number) => void;
@@ -32,11 +45,22 @@ export interface TimelineCallbacks {
   onNearestJump: (requestedYear: number, landedIndex: number) => void;
 }
 
+interface Segment {
+  from: number;
+  to: number;
+  /** Left edge and width on the axis, in percent. */
+  left: number;
+  width: number;
+}
+
 export class Timeline {
   private readonly snapshots: ManifestSnapshot[];
   private readonly callbacks: TimelineCallbacks;
 
-  private readonly slider: HTMLInputElement;
+  private readonly track: HTMLElement;
+  private readonly bandsNode: HTMLElement;
+  private readonly fillNode: HTMLElement;
+  private readonly thumbNode: HTMLElement;
   private readonly playButton: HTMLButtonElement;
   private readonly previousButton: HTMLButtonElement;
   private readonly nextButton: HTMLButtonElement;
@@ -45,12 +69,15 @@ export class Timeline {
   private readonly jumpInput: HTMLInputElement;
   private readonly jumpOptions: HTMLDataListElement;
   private readonly neighboursNode: HTMLElement;
+  private readonly eraNode: HTMLElement;
   private readonly ticksNode: HTMLElement;
   private readonly eventMarksNode: HTMLElement;
   private eventYears: Array<{ year: number; names: string[] }> = [];
 
+  private readonly segments: Segment[];
   private index = 0;
   private playTimer: number | null = null;
+  private dragging = false;
 
   constructor(
     root: HTMLElement,
@@ -60,7 +87,10 @@ export class Timeline {
     this.snapshots = snapshots;
     this.callbacks = callbacks;
 
-    this.slider = root.querySelector<HTMLInputElement>('#timeline-slider')!;
+    this.track = root.querySelector<HTMLElement>('#timeline-track')!;
+    this.bandsNode = root.querySelector<HTMLElement>('#timeline-bands')!;
+    this.fillNode = root.querySelector<HTMLElement>('#timeline-fill')!;
+    this.thumbNode = root.querySelector<HTMLElement>('#timeline-thumb')!;
     this.playButton = root.querySelector<HTMLButtonElement>('#timeline-play')!;
     this.previousButton = root.querySelector<HTMLButtonElement>('#timeline-prev')!;
     this.nextButton = root.querySelector<HTMLButtonElement>('#timeline-next')!;
@@ -69,22 +99,19 @@ export class Timeline {
     this.jumpInput = root.querySelector<HTMLInputElement>('#year-jump-input')!;
     this.jumpOptions = root.querySelector<HTMLDataListElement>('#year-jump-options')!;
     this.neighboursNode = root.querySelector<HTMLElement>('#timeline-neighbours')!;
+    this.eraNode = root.querySelector<HTMLElement>('#timeline-era')!;
     this.ticksNode = root.querySelector<HTMLElement>('#timeline-ticks')!;
     this.eventMarksNode = root.querySelector<HTMLElement>('#timeline-eventmarks')!;
 
-    this.slider.min = '0';
-    this.slider.max = String(snapshots.length - 1);
-    this.slider.step = '1';
-    this.slider.value = '0';
+    this.segments = this.buildSegments();
+    this.track.setAttribute('role', 'slider');
+    this.track.setAttribute('tabindex', '0');
+    this.track.setAttribute('aria-valuemin', '0');
+    this.track.setAttribute('aria-valuemax', String(snapshots.length - 1));
+    this.buildBands();
     this.buildTicks();
     this.applyLabels();
-
-    // A range input already moves one step per arrow key, and one step is one
-    // snapshot, so keyboard navigation snaps to real years for free.
-    this.slider.addEventListener('input', () => {
-      this.stop();
-      this.setIndex(Number(this.slider.value));
-    });
+    this.bindPointer();
 
     this.previousButton.addEventListener('click', () => {
       this.stop();
@@ -109,22 +136,145 @@ export class Timeline {
       window.setTimeout(() => this.closeJump(), 150);
     });
 
-    // Arrow keys work anywhere on the page, not only when the slider has focus.
+    // Arrow keys work anywhere on the page, not only when the track has focus.
     window.addEventListener('keydown', (event) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
-      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) && target !== this.slider) {
-        return;
-      }
+      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+      if (target?.closest('dialog[open]')) return;
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-        if (target === this.slider) return; // let the input handle it natively
         event.preventDefault();
         this.stop();
         this.setIndex(this.index + (event.key === 'ArrowRight' ? 1 : -1));
+      } else if (target === this.track && (event.key === 'Home' || event.key === 'End')) {
+        event.preventDefault();
+        this.stop();
+        this.setIndex(event.key === 'Home' ? 0 : this.snapshots.length - 1);
       }
     });
 
     this.render();
+  }
+
+  /* ------------------------------------------------------------ geometry */
+
+  /**
+   * Cuts the axis at the era edges and gives each piece a width proportional
+   * to the snapshots it holds (with a small floor so an empty piece still
+   * shows). Inside a piece, years map linearly.
+   */
+  private buildSegments(): Segment[] {
+    const first = this.snapshots[0].year;
+    const last = this.snapshots[this.snapshots.length - 1].year;
+    const edges = [first, ...SEGMENT_EDGES.filter((edge) => edge > first && edge < last), last];
+
+    const counts = edges.slice(0, -1).map((from, i) => {
+      const to = edges[i + 1];
+      return this.snapshots.filter(
+        (snapshot) => (i === 0 ? snapshot.year >= from : snapshot.year > from) && snapshot.year <= to,
+      ).length;
+    });
+    const weights = counts.map((count) => Math.max(count, 0.75));
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+
+    let left = 0;
+    return edges.slice(0, -1).map((from, i) => {
+      const width = (weights[i] / total) * 100;
+      const segment = { from, to: edges[i + 1], left, width };
+      left += width;
+      return segment;
+    });
+  }
+
+  /** Position of an arbitrary year on the axis, in percent. */
+  private positionOfYear(year: number): number {
+    const first = this.segments[0];
+    const last = this.segments[this.segments.length - 1];
+    if (year <= first.from) return 0;
+    if (year >= last.to) return 100;
+    for (const segment of this.segments) {
+      if (year > segment.from && year <= segment.to) {
+        const inner = (year - segment.from) / (segment.to - segment.from);
+        return segment.left + inner * segment.width;
+      }
+    }
+    return 100;
+  }
+
+  private positionOf(index: number): number {
+    return this.positionOfYear(this.snapshots[index].year);
+  }
+
+  /** Era bands along the top of the track, labelled in the active language. */
+  private buildBands(): void {
+    this.bandsNode.innerHTML = '';
+    const first = this.snapshots[0].year;
+    const last = this.snapshots[this.snapshots.length - 1].year;
+    const edges = [first, ...ERA_EDGES.filter((edge) => edge > first && edge < last), last];
+    for (let i = 0; i < edges.length - 1; i += 1) {
+      const band = document.createElement('div');
+      band.className = `timeline__band timeline__band--${i % 2}`;
+      const left = this.positionOfYear(edges[i]);
+      const right = this.positionOfYear(edges[i + 1]);
+      band.style.left = `${left}%`;
+      band.style.width = `${right - left}%`;
+      band.dataset.era = String(i);
+      const label = document.createElement('span');
+      label.className = 'timeline__band-label';
+      label.textContent = strings.eraNames[i] ?? '';
+      band.title = `${strings.eraNames[i] ?? ''}: ${formatYear(edges[i])} – ${formatYear(edges[i + 1])}`;
+      band.append(label);
+      this.bandsNode.append(band);
+    }
+  }
+
+  /* ------------------------------------------------------------- pointer */
+
+  /**
+   * Dragging or tapping anywhere on the track snaps to the nearest stop, so
+   * the tightly packed decades stay reachable without aiming at a 4-pixel
+   * tick. A tick's own button still wins when it is the actual target.
+   */
+  private bindPointer(): void {
+    const pick = (clientX: number) => {
+      const rect = this.track.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const pct = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+      let best = 0;
+      let bestDistance = Infinity;
+      for (let i = 0; i < this.snapshots.length; i += 1) {
+        const distance = Math.abs(this.positionOf(i) - pct);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = i;
+        }
+      }
+      this.setIndex(best);
+    };
+
+    this.track.addEventListener('pointerdown', (event) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('.evmark')) return; // its own click handles it
+      const tick = target.closest<HTMLElement>('.tick');
+      event.preventDefault();
+      this.stop();
+      this.dragging = true;
+      this.track.setPointerCapture(event.pointerId);
+      this.track.classList.add('timeline__track--dragging');
+      if (tick?.dataset.index !== undefined) this.setIndex(Number(tick.dataset.index));
+      else pick(event.clientX);
+    });
+    this.track.addEventListener('pointermove', (event) => {
+      if (!this.dragging) return;
+      pick(event.clientX);
+    });
+    const release = () => {
+      if (!this.dragging) return;
+      this.dragging = false;
+      this.track.classList.remove('timeline__track--dragging');
+    };
+    this.track.addEventListener('pointerup', release);
+    this.track.addEventListener('pointercancel', release);
   }
 
   /* ------------------------------------------------------------ year jump */
@@ -179,7 +329,7 @@ export class Timeline {
 
   /** Re-applies every translated label. Called on start-up and on locale change. */
   private applyLabels(): void {
-    this.slider.setAttribute('aria-label', strings.timelineLabel);
+    this.track.setAttribute('aria-label', strings.timelineLabel);
     this.yearNode.title = strings.yearJumpTitle;
     this.yearNode.setAttribute('aria-label', strings.yearJumpTitle);
     this.jumpInput.placeholder = strings.yearJumpPlaceholder;
@@ -210,6 +360,7 @@ export class Timeline {
   /** Language changed: era suffixes, number grouping and every label move with it. */
   retranslate(): void {
     this.applyLabels();
+    this.buildBands();
     this.relabelTicks();
     this.renderEventMarks();
     this.render();
@@ -222,10 +373,7 @@ export class Timeline {
       tick.className = 'tick';
       tick.style.left = `${this.positionOf(index)}%`;
       tick.dataset.index = String(index);
-      tick.addEventListener('click', () => {
-        this.stop();
-        this.setIndex(index);
-      });
+      tick.tabIndex = -1; // the track itself is the keyboard control
       this.ticksNode.append(tick);
     });
 
@@ -233,33 +381,6 @@ export class Timeline {
     if (typeof ResizeObserver !== 'undefined') {
       new ResizeObserver(() => this.relabelTicks()).observe(this.ticksNode);
     }
-  }
-
-  private positionOf(index: number): number {
-    const total = this.snapshots.length;
-    return total === 1 ? 0 : (index / (total - 1)) * 100;
-  }
-
-  /**
-   * Position of an arbitrary year on the ordinal axis: linear interpolation
-   * inside the segment between the two snapshots that bracket it. This places
-   * a mark, not a border claim — 1618 lands between the 1600 and 1650 stops.
-   */
-  private positionOfYear(year: number): number {
-    const total = this.snapshots.length;
-    if (total === 1) return 0;
-    if (year <= this.snapshots[0].year) return 0;
-    const last = this.snapshots[total - 1].year;
-    if (year >= last) return 100;
-    for (let i = 0; i < total - 1; i += 1) {
-      const a = this.snapshots[i].year;
-      const b = this.snapshots[i + 1].year;
-      if (year >= a && year <= b) {
-        const inner = b === a ? 0 : (year - a) / (b - a);
-        return ((i + inner) / (total - 1)) * 100;
-      }
-    }
-    return 100;
   }
 
   /**
@@ -299,8 +420,7 @@ export class Timeline {
    * per language ("2000 BC" vs "2000 př. n. l.") and the two end labels are
    * edge-aligned rather than centred, so the real test is whether the boxes
    * actually touch. Every tick stays clickable and keeps its year in
-   * `title`/`aria-label`; only the printed subset thins out, so nothing is
-   * hidden from keyboard or screen-reader users.
+   * `title`/`aria-label`; only the printed subset thins out.
    */
   private relabelTicks(): void {
     for (const label of this.ticksNode.querySelectorAll('.tick__label')) label.remove();
@@ -345,11 +465,11 @@ export class Timeline {
 
   private render(): void {
     const snapshot = this.snapshots[this.index];
-    this.slider.value = String(this.index);
-    this.slider.setAttribute('aria-valuetext', formatYear(snapshot.year));
-    // Chromium draws no progress fill on a custom track; the stylesheet
-    // paints one from this variable.
-    this.slider.style.setProperty('--fill', `${this.positionOf(this.index)}%`);
+    const position = this.positionOf(this.index);
+    this.track.setAttribute('aria-valuenow', String(this.index));
+    this.track.setAttribute('aria-valuetext', formatYear(snapshot.year));
+    this.thumbNode.style.left = `${position}%`;
+    this.fillNode.style.width = `${position}%`;
 
     this.yearNode.textContent = formatYear(snapshot.year);
     this.renderNeighbours();
@@ -359,6 +479,15 @@ export class Timeline {
 
     for (const tick of this.ticksNode.querySelectorAll<HTMLElement>('.tick')) {
       tick.classList.toggle('tick--active', Number(tick.dataset.index) === this.index);
+    }
+    for (const band of this.bandsNode.querySelectorAll<HTMLElement>('.timeline__band')) {
+      const left = parseFloat(band.style.left);
+      const width = parseFloat(band.style.width);
+      const current = position >= left && (position < left + width || left + width >= 100);
+      band.classList.toggle('timeline__band--current', current);
+      // On a phone the bands are too narrow for their labels, so the current
+      // era is also named beside the year.
+      if (current) this.eraNode.textContent = strings.eraNames[Number(band.dataset.era)] ?? '';
     }
   }
 

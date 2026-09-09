@@ -14,6 +14,11 @@
     <!--
       Text nodes carrying data-i18n are filled from src/strings.ts at start-up,
       so no user-facing copy is hard-coded in this file.
+
+      Layout: the map fills the viewport; everything else floats over it — the
+      layer chips and facts card top-left, the help card and detail panel, and
+      the dock at the bottom (year, axis, chapters). The chapters list and the
+      data notes live in a drawer and a dialog so the map never has to shrink.
     -->
     <div class="app">
       <header class="topbar">
@@ -39,17 +44,14 @@
         </form>
 
         <div class="topbar__controls">
-          <div class="topbar__views" role="group">
-            <button id="reset-world" class="control" type="button" data-i18n="resetWorld"></button>
-            <button id="reset-view" class="control" type="button" data-i18n="resetView"></button>
-            <button id="modern-hold" class="control control--hold" type="button" data-i18n="modernHold"></button>
-          </div>
+          <button id="about-open" class="control topbar__about" type="button" data-i18n-aria="aboutButton">
+            <span data-i18n="aboutButton"></span>
+          </button>
+          <label class="control control--select topbar__lang">
+            <span id="language-label" class="control__state"></span>
+            <select id="language-select" class="control__select"></select>
+          </label>
         </div>
-
-        <label class="control control--select topbar__lang">
-          <span id="language-label" class="control__state"></span>
-          <select id="language-select" class="control__select"></select>
-        </label>
       </header>
 
       <main class="stage">
@@ -68,20 +70,43 @@
             <button id="basemap-toggle" class="chip" type="button" aria-pressed="true">
               <span data-i18n="basemapToggle"></span>
             </button>
+            <button id="modern-toggle" class="chip chip--modern" type="button" aria-pressed="false">
+              <span data-i18n="modernToggle"></span>
+            </button>
+            <button
+              id="help-toggle"
+              class="help-toggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="legend"
+              data-i18n-aria="helpToggle"
+            >
+              ?
+            </button>
           </div>
+
+          <section
+            id="disclaimer"
+            class="disclaimer"
+            role="note"
+            aria-live="polite"
+            hidden
+          >
+            <div class="disclaimer__text">
+              <strong data-i18n="disclaimerTitle"></strong>
+              <p data-i18n="disclaimerBody"></p>
+            </div>
+            <button
+              id="disclaimer-dismiss"
+              class="disclaimer__dismiss"
+              type="button"
+              data-i18n="disclaimerDismiss"
+            ></button>
+          </section>
+
           <aside id="facts" class="facts" data-i18n-aria="factsAriaLabel" hidden></aside>
         </div>
 
-        <button
-          id="help-toggle"
-          class="help-toggle"
-          type="button"
-          aria-expanded="false"
-          aria-controls="legend"
-          data-i18n-aria="helpToggle"
-        >
-          ?
-        </button>
         <aside id="legend" class="legend" hidden>
           <div class="legend__head">
             <h2 class="legend__title" data-i18n="legendHeading"></h2>
@@ -101,6 +126,9 @@
           <p id="basemap-hint" class="legend__note legend__note--hint" hidden></p>
           <h3 class="legend__subtitle" data-i18n="helpStartHeading"></h3>
           <ol id="help-steps" class="legend__steps"></ol>
+          <h3 class="legend__subtitle" data-i18n="helpAxisHeading"></h3>
+          <p class="legend__note" data-i18n="timelineHelp"></p>
+          <p class="legend__note" data-i18n="timelineNote"></p>
           <button id="help-ok" class="control legend__ok" type="button" data-i18n="disclaimerDismiss"></button>
         </aside>
 
@@ -110,116 +138,111 @@
           aria-hidden="true"
           data-i18n-aria="panelAriaLabel"
         ></aside>
+
+        <!-- The dock: where (view), when (year, axis) and stories (chapters). -->
+        <section id="timeline" class="dock">
+          <div class="dock__row">
+            <nav class="breadcrumb" aria-label="View">
+              <button id="reset-world" class="crumb" type="button" data-i18n="resetWorld"></button>
+              <span class="crumb__sep" aria-hidden="true">›</span>
+              <button id="reset-view" class="crumb" type="button" data-i18n="resetView"></button>
+            </nav>
+            <div class="timeline__readout">
+              <button id="timeline-year" class="timeline__year" type="button"></button>
+              <form id="year-jump" class="timeline__jump" hidden>
+                <input
+                  id="year-jump-input"
+                  class="timeline__jump-input"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  list="year-jump-options"
+                />
+                <datalist id="year-jump-options"></datalist>
+              </form>
+              <span id="timeline-neighbours" class="timeline__neighbours"></span>
+              <span id="timeline-era" class="timeline__era"></span>
+            </div>
+            <span id="timeline-features" class="timeline__features"></span>
+            <button id="chapters-open" class="control dock__chapters" type="button" data-i18n="chaptersHeading"></button>
+          </div>
+
+          <div class="timeline__controls">
+            <button id="timeline-prev" class="control control--icon" type="button">‹</button>
+            <button id="timeline-play" class="control control--icon" type="button">▶</button>
+            <button id="timeline-next" class="control control--icon" type="button">›</button>
+
+            <div id="timeline-track" class="timeline__track">
+              <div id="timeline-bands" class="timeline__bands" aria-hidden="true"></div>
+              <div class="timeline__rail" aria-hidden="true">
+                <div id="timeline-fill" class="timeline__fill"></div>
+              </div>
+              <div id="timeline-eventmarks" class="timeline__eventmarks"></div>
+              <div id="timeline-ticks" class="timeline__ticks" aria-hidden="true"></div>
+              <div id="timeline-thumb" class="timeline__thumb" aria-hidden="true"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Chapter mode replaces the dock with the chapter card. -->
+        <section id="chapter" class="dock dock--chapter" hidden>
+          <div class="chapter__head">
+            <button id="chapter-exit" class="control chapter__exit" type="button" data-i18n="chapterExit"></button>
+            <h2 id="chapter-title" class="chapter__title"></h2>
+            <span id="chapter-range" class="chapter__range"></span>
+            <span id="chapter-badge" class="chapter__badge"></span>
+            <button id="chapter-prestate" class="control chapter__prestate" type="button" hidden></button>
+          </div>
+          <p id="chapter-desc" class="chapter__desc"></p>
+          <div id="chapter-sides" class="chapter__sides" hidden></div>
+          <p id="chapter-note" class="chapter__note" hidden></p>
+
+          <div class="chapter__controls">
+            <button id="chapter-prev" class="control control--icon" type="button">‹</button>
+            <button id="chapter-play" class="control control--icon" type="button">▶</button>
+            <button id="chapter-next" class="control control--icon" type="button">›</button>
+
+            <div class="chapter__axis">
+              <div id="chapter-track" class="chapter__track">
+                <div id="chapter-fill" class="chapter__fill"></div>
+              </div>
+              <div class="chapter__ends">
+                <span id="chapter-start"></span>
+                <span id="chapter-end"></span>
+              </div>
+            </div>
+          </div>
+
+          <p class="chapter__readout">
+            <span id="chapter-milestone"></span>
+            <span id="chapter-milestone-position" class="chapter__position"></span>
+          </p>
+          <p class="chapter__help">
+            <span data-i18n="chapterAxisHelp"></span>
+            <span id="chapter-source"></span>
+          </p>
+        </section>
+
+        <!-- Chapters drawer: every chapter, grouped by category. -->
+        <aside id="chapters" class="drawer" hidden data-i18n-aria="chaptersHeading">
+          <div class="drawer__head">
+            <h2 class="drawer__title" data-i18n="chaptersHeading"></h2>
+            <button id="chapters-close" class="drawer__close" type="button" data-i18n-aria="chaptersClose">×</button>
+          </div>
+          <p class="drawer__intro" data-i18n="chaptersDrawerIntro"></p>
+          <div id="chapters-list" class="drawer__body"></div>
+        </aside>
       </main>
-
-      <section
-        id="disclaimer"
-        class="disclaimer"
-        role="note"
-        aria-live="polite"
-        hidden
-      >
-        <div class="disclaimer__text">
-          <strong data-i18n="disclaimerTitle"></strong>
-          <p data-i18n="disclaimerBody"></p>
-        </div>
-        <button
-          id="disclaimer-dismiss"
-          class="disclaimer__dismiss"
-          type="button"
-          data-i18n="disclaimerDismiss"
-        ></button>
-      </section>
-
-      <section id="chapters" class="chapters">
-        <h2 class="chapters__heading" data-i18n="chaptersHeading"></h2>
-        <div id="chapters-tabs" class="chapters__tabs" role="tablist"></div>
-        <div id="chapters-strip" class="chapters__strip"></div>
-      </section>
-
-      <section id="chapter" class="chapter" hidden>
-        <div class="chapter__head">
-          <button id="chapter-exit" class="control chapter__exit" type="button" data-i18n="chapterExit"></button>
-          <h2 id="chapter-title" class="chapter__title"></h2>
-          <span id="chapter-range" class="chapter__range"></span>
-          <span id="chapter-badge" class="chapter__badge"></span>
-          <button id="chapter-prestate" class="control chapter__prestate" type="button" hidden></button>
-        </div>
-        <p id="chapter-desc" class="chapter__desc"></p>
-        <div id="chapter-sides" class="chapter__sides" hidden></div>
-        <p id="chapter-note" class="chapter__note" hidden></p>
-
-        <div class="chapter__controls">
-          <button id="chapter-prev" class="control control--icon" type="button">‹</button>
-          <button id="chapter-play" class="control control--icon" type="button">▶</button>
-          <button id="chapter-next" class="control control--icon" type="button">›</button>
-
-          <div class="chapter__axis">
-            <div id="chapter-track" class="chapter__track">
-              <div id="chapter-fill" class="chapter__fill"></div>
-            </div>
-            <div class="chapter__ends">
-              <span id="chapter-start"></span>
-              <span id="chapter-end"></span>
-            </div>
-          </div>
-        </div>
-
-        <p class="chapter__readout">
-          <span id="chapter-milestone"></span>
-          <span id="chapter-milestone-position" class="chapter__position"></span>
-        </p>
-        <p class="chapter__help">
-          <span data-i18n="chapterAxisHelp"></span>
-          <span id="chapter-source"></span>
-        </p>
-      </section>
-
-      <section id="timeline" class="timeline">
-        <div class="timeline__readout">
-          <span class="timeline__label" data-i18n="showingYear"></span>
-          <button id="timeline-year" class="timeline__year" type="button"></button>
-          <form id="year-jump" class="timeline__jump" hidden>
-            <input
-              id="year-jump-input"
-              class="timeline__jump-input"
-              type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              spellcheck="false"
-              list="year-jump-options"
-            />
-            <datalist id="year-jump-options"></datalist>
-          </form>
-          <span id="timeline-neighbours" class="timeline__neighbours"></span>
-          <span id="timeline-features" class="timeline__features"></span>
-        </div>
-
-        <div class="timeline__controls">
-          <button id="timeline-prev" class="control control--icon" type="button">‹</button>
-          <button id="timeline-play" class="control control--icon" type="button">▶</button>
-          <button id="timeline-next" class="control control--icon" type="button">›</button>
-
-          <div class="timeline__track">
-            <input id="timeline-slider" class="timeline__slider" type="range" />
-            <div id="timeline-eventmarks" class="timeline__eventmarks"></div>
-            <div id="timeline-ticks" class="timeline__ticks" aria-hidden="true"></div>
-          </div>
-        </div>
-
-        <p class="timeline__help">
-          <span data-i18n="timelineHelp"></span>
-          <span data-i18n="timelineNote"></span>
-        </p>
-      </section>
     </div>
 
-    <!--
-      Outside .app on purpose: the app box fills the viewport exactly (header,
-      map, chapters, timeline), so the map takes every pixel left over and the
-      footer starts below the fold.
-    -->
-    <footer class="footer">
+    <!-- Data, licensing and method notes, opened from the top bar. -->
+    <dialog id="about" class="about">
+      <div class="about__head">
+        <h2 class="about__title" data-i18n="aboutButton"></h2>
+        <button id="about-close" class="about__close" type="button" data-i18n-aria="panelClose">×</button>
+      </div>
+      <div class="footer">
         <div class="footer__column">
           <h2 class="footer__heading" data-i18n="footerDataHeading"></h2>
           <p>
@@ -258,7 +281,8 @@
           <p id="footer-simplification" class="footer__muted"></p>
           <p class="footer__muted" data-i18n="footerLanguageNote"></p>
         </div>
-      </footer>
+      </div>
+    </dialog>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

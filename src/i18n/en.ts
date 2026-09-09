@@ -40,7 +40,9 @@ export const en: Strings = {
   timelineHelp:
     'Use the left and right arrow keys to step between snapshots. The slider stops only at years that exist in the dataset — there is nothing in between.',
   timelineNote:
-    'Snapshots are spaced evenly along this axis, not in proportion to elapsed time. The gaps between them range from a decade to tens of millennia.',
+    'Within each segment the axis runs linearly in time; segment widths follow the number of snapshots, not the years they span. The era names are orientation labels, not part of the dataset.',
+  helpAxisHeading: 'The axis',
+  eraNames: ['Prehistory', 'Antiquity', 'Middle Ages', 'Early modern', 'Modern era'],
   goToYear: (year) => `Go to the ${year} snapshot`,
   snapshotPosition: (index, total) => `Snapshot ${index} of ${total}`,
 
@@ -77,7 +79,7 @@ export const en: Strings = {
   helpSteps: [
     'Move the year on the axis below the map, or click the year and type one.',
     'Click a territory to open its dataset record.',
-    'Open a chapter below the map and step through its milestones.',
+    'Open Chapters in the bottom bar and step through the milestones of one.',
     'Type a territory, event, chapter or year into the box at the top.',
   ],
 
@@ -167,9 +169,15 @@ export const en: Strings = {
   chapterOpenAria: (name, range) => `Open chapter ${name} (${range})`,
   chapterSidesLabel: 'Sides',
 
-  modernHold: 'Today',
-  modernHoldTitle: (snapshotYear) =>
-    `Hold to compare with today’s borders (the dataset’s newest snapshot, ${snapshotYear})`,
+  modernToggle: 'Today’s borders',
+  modernToggleTitle: (snapshotYear) =>
+    `Show today’s borders as an outline for comparison (the dataset’s newest snapshot, ${snapshotYear})`,
+
+  chaptersDrawerIntro:
+    'Bounded periods with milestones on their own axis. Borders on the map always come from the named dataset snapshot.',
+  chaptersClose: 'Close chapters',
+
+  aboutButton: 'About the data',
 
   disclaimerTitle: 'Borders before 1648 are approximations',
   disclaimerBody:

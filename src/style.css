@@ -1,7 +1,10 @@
 /*
- * Layout: a fixed top bar, a full-bleed map, a sticky timeline and a footer
- * below the fold. Both colour modes are declared explicitly; the map palette in
- * src/colors.ts is stepped for each surface separately.
+ * Layout: a slim top bar and a map that fills the rest of the viewport.
+ * Everything else floats over the map — layer chips and facts top-left, the
+ * detail panel (a right drawer, a bottom sheet on phones), the help card, and
+ * the dock at the bottom carrying the view crumbs, the year, the axis and the
+ * chapters button. Both colour modes are declared explicitly; the map palette
+ * in src/colors.ts is stepped for each surface separately.
  */
 
 :root {
@@ -65,6 +68,8 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
+  /* The page itself never scrolls: the map is the page. */
+  overflow: hidden;
 }
 
 body {
@@ -87,7 +92,7 @@ a:hover {
 
 .app {
   display: flex;
-  min-height: 100%;
+  height: 100%;
   flex-direction: column;
 }
 
@@ -339,10 +344,7 @@ a:hover {
 .stage {
   position: relative;
   flex: 1 1 auto;
-  /* The app box is exactly one viewport tall (the footer sits outside it),
-     so the flex grows the map to fill whatever the bars leave over; this
-     floor only matters on a very short screen. */
-  min-height: 45vh;
+  min-height: 0;
   /* The closed panel waits just off-stage (translateX(100%)); without
      clipping it would widen the page and let the whole body pan sideways. */
   overflow: hidden;
@@ -472,20 +474,18 @@ a:hover {
 /* ------------------------------------------------------------------ legend */
 
 .help-toggle {
-  position: absolute;
-  z-index: 4;
-  bottom: 0.75rem;
-  left: 0.75rem;
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
   border: 1px solid var(--border-strong);
   border-radius: 50%;
-  background: var(--surface-raised);
+  background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
   box-shadow: var(--shadow);
   color: var(--text-primary);
   font: inherit;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -504,7 +504,7 @@ a:hover {
    the first visit or on demand, and must not hide the layer chips. */
 .legend {
   position: absolute;
-  z-index: 6;
+  z-index: 10;
   top: 50%;
   left: 50%;
   width: min(24rem, calc(100% - 1.5rem));
@@ -771,39 +771,40 @@ a:hover {
 
 /* -------------------------------------------------------------- disclaimer */
 
+/* Sits in the top-left stack under the layer chips, as a card. */
 .disclaimer {
   display: flex;
-  /* Never let the map squeeze the banner into an unreadable sliver. */
-  flex-shrink: 0;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.6rem 1rem;
-  border-top: 1px solid var(--warn-border);
-  border-bottom: 1px solid var(--warn-border);
-  background: var(--warn-surface);
+  gap: 0.75rem;
+  width: min(26rem, 100%);
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--warn-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--warn-surface) 96%, transparent);
+  box-shadow: var(--shadow);
   color: var(--warn-text);
 }
 
 .disclaimer__text p {
   margin: 0.2rem 0 0;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
 }
 
 .disclaimer__text strong {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .disclaimer__dismiss {
   flex-shrink: 0;
-  padding: 0.35rem 0.7rem;
+  padding: 0.3rem 0.6rem;
   border: 1px solid var(--warn-border);
   border-radius: 6px;
   background: transparent;
   color: inherit;
   cursor: pointer;
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
 }
 
 /* ------------------------------------------------------------------- facts */
@@ -869,30 +870,90 @@ a:hover {
   color: var(--warn-text);
 }
 
-/* ---------------------------------------------------------------- timeline */
+/* -------------------------------------------------------------------- dock */
 
-.timeline {
-  position: sticky;
-  flex-shrink: 0;
+/*
+ * The dock floats over the foot of the map: where (view crumbs), when (year
+ * and axis) and stories (chapters). Chapter mode swaps it for the chapter
+ * card, which shares the shell.
+ */
+.dock {
+  position: absolute;
   z-index: 8;
-  bottom: 0;
-  padding: 0.6rem 1rem 0.75rem;
-  border-top: 1px solid var(--border);
-  background: var(--surface-raised);
+  bottom: 0.75rem;
+  left: 50%;
+  width: min(66rem, calc(100% - 1.5rem));
+  padding: 0.5rem 0.9rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+  backdrop-filter: blur(6px);
 }
+
+.dock__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.9rem;
+}
+
+.breadcrumb {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+}
+
+.crumb {
+  padding: 0.1rem 0.35rem;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.crumb:hover {
+  color: var(--text-primary);
+  background: var(--surface-sunken);
+}
+
+.crumb[aria-current='true'] {
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font-weight: 650;
+}
+
+.crumb:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.crumb__sep {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.dock__chapters {
+  margin-left: auto;
+  padding: 0.3rem 0.7rem;
+  font-weight: 600;
+}
+
+.dock__chapters[aria-expanded='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- timeline */
 
 .timeline__readout {
   display: flex;
   align-items: baseline;
-  flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-.timeline__label {
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .timeline__year {
@@ -902,7 +963,7 @@ a:hover {
   color: inherit;
   cursor: pointer;
   font-family: inherit;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
@@ -934,7 +995,7 @@ a:hover {
   background: var(--surface-raised);
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -952,6 +1013,15 @@ a:hover {
 .timeline__features {
   color: var(--text-muted);
   font-size: 0.76rem;
+}
+
+/* Era beside the year: only shown where the band labels cannot fit. */
+.timeline__era {
+  display: none;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .timeline__neighbours {
@@ -988,77 +1058,132 @@ a:hover {
 
 .timeline__controls {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.4rem;
-  margin-top: 0.35rem;
+  margin-top: 0.3rem;
 }
 
+.timeline__controls .control--icon {
+  margin-top: 0.85rem;
+}
+
+/*
+ * The track is one pointer target: press or drag anywhere and the thumb snaps
+ * to the nearest stop. Layers from top to bottom: era bands, rail with fill
+ * and thumb, event marks, ticks with year labels.
+ */
 .timeline__track {
   position: relative;
   flex: 1 1 auto;
-  padding-bottom: 1.1rem;
-}
-
-/* A larger thumb than the browser default: the slider is the main control
-   and on a phone the default one is hard to grab. */
-.timeline__slider {
-  width: 100%;
-  height: 1.6rem;
-  margin: 0;
-  background: transparent;
-  accent-color: var(--accent);
-  appearance: none;
-  -webkit-appearance: none;
+  height: 3.55rem;
   cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.timeline__slider::-webkit-slider-runnable-track {
-  height: 6px;
+.timeline__track:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.timeline__bands {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 0.95rem;
+}
+
+.timeline__band {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  overflow: hidden;
   border-radius: 3px;
-  background: linear-gradient(to right, var(--accent) 0, var(--accent) var(--fill, 0%), var(--border) var(--fill, 0%));
+  background: color-mix(in srgb, var(--border) 45%, transparent);
 }
 
-.timeline__slider::-moz-range-track {
+.timeline__band--1 {
+  background: color-mix(in srgb, var(--border) 22%, transparent);
+}
+
+.timeline__band--current {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.timeline__band-label {
+  display: block;
+  overflow: hidden;
+  padding: 0 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 0.95rem;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.timeline__band--current .timeline__band-label {
+  color: var(--accent);
+}
+
+.timeline__rail {
+  position: absolute;
+  top: 1.35rem;
+  right: 0;
+  left: 0;
   height: 6px;
   border-radius: 3px;
   background: var(--border);
 }
 
-.timeline__slider::-moz-range-progress {
-  height: 6px;
+.timeline__fill {
+  height: 100%;
   border-radius: 3px;
   background: var(--accent);
+  transition: width 120ms ease;
 }
 
-.timeline__slider::-webkit-slider-thumb {
-  width: 22px;
-  height: 22px;
-  margin-top: -8px;
+.timeline__thumb {
+  position: absolute;
+  top: calc(1.35rem + 3px);
+  width: 20px;
+  height: 20px;
   border: 3px solid var(--surface-raised);
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 1px 4px rgb(0 0 0 / 35%);
-  -webkit-appearance: none;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: left 120ms ease;
 }
 
-.timeline__slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border: 3px solid var(--surface-raised);
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 35%);
+.timeline__track--dragging .timeline__thumb,
+.timeline__track--dragging .timeline__fill {
+  transition: none;
 }
 
-.timeline__slider:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
+.timeline__track--dragging .timeline__thumb {
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline__thumb,
+  .timeline__fill {
+    transition: none;
+  }
 }
 
 .timeline__ticks {
-  position: relative;
-  height: 1rem;
-  margin-top: 0.15rem;
+  position: absolute;
+  top: 2.15rem;
+  right: 0;
+  left: 0;
+  height: 1.4rem;
 }
 
 .tick {
@@ -1089,14 +1214,9 @@ a:hover {
   background: var(--accent);
 }
 
-.tick:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
 .tick__label {
   position: absolute;
-  top: 0.6rem;
+  top: 0.55rem;
   color: var(--text-muted);
   font-size: 0.6rem;
   font-variant-numeric: tabular-nums;
@@ -1115,22 +1235,14 @@ a:hover {
   transform: translateX(-100%);
 }
 
-.timeline__help {
-  margin: 0.55rem 0 0;
-  color: var(--text-muted);
-  font-size: 0.72rem;
-}
-
-.timeline__help span + span {
-  margin-left: 0.4rem;
-}
-
 /* -------------------------------------------------- event marks and popup */
 
 .timeline__eventmarks {
-  position: relative;
+  position: absolute;
+  top: 1.85rem;
+  right: 0;
+  left: 0;
   height: 8px;
-  margin-top: 2px;
 }
 
 .evmark {
@@ -1193,6 +1305,11 @@ a:hover {
   max-width: 300px;
 }
 
+/* The same content in the bottom sheet may use the full width. */
+.panel__body .evpop {
+  max-width: none;
+}
+
 .evpop__disclaimer {
   margin: 0 0 0.4rem;
   color: var(--warn-text);
@@ -1227,15 +1344,160 @@ a:hover {
   font-size: 0.72rem;
 }
 
-/* ------------------------------------------------------------------ footer */
+/* ---------------------------------------------------------------- drawer */
+
+/* The chapters list: a right-hand drawer over the map. */
+.drawer {
+  position: absolute;
+  z-index: 9;
+  top: 0;
+  right: 0;
+  display: flex;
+  width: min(24rem, 100%);
+  height: 100%;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+}
+
+.drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.drawer__close,
+.about__close {
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.drawer__close:focus-visible,
+.about__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.drawer__intro {
+  margin: 0;
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+}
+
+.drawer__body {
+  overflow-y: auto;
+  padding: 0.4rem 0.6rem 1.5rem;
+}
+
+.drawer__group {
+  margin: 0.9rem 0.3rem 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chapter-item {
+  display: grid;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  gap: 0.1rem 0.6rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.chapter-item:hover {
+  background: var(--surface-sunken);
+}
+
+.chapter-item--active {
+  border-color: var(--accent);
+}
+
+.chapter-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.chapter-item__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.chapter-item__range {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chapter-item__desc {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  grid-column: 1 / -1;
+}
+
+/* ----------------------------------------------------------------- about */
+
+.about {
+  width: min(62rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+  color: var(--text-primary);
+}
+
+.about::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.about__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.about__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+}
 
 .footer {
   display: grid;
   padding: 1rem;
-  border-top: 1px solid var(--border);
-  background: var(--surface-sunken);
   color: var(--text-secondary);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   gap: 1rem 2rem;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
 }
@@ -1265,228 +1527,11 @@ a:hover {
   color: var(--text-muted);
 }
 
-/* ------------------------------------------------------------- narrow view */
-
-@media (max-width: 700px) {
-  .topbar {
-    flex-wrap: wrap;
-  }
-
-  .topbar__tagline {
-    display: none;
-  }
-
-  .topbar__controls {
-    flex-shrink: 1;
-  }
-
-  /* The language names in the select identify it well enough; the word
-     "Language" is what pushes the fourth control off a narrow screen. */
-  .control--select #language-label {
-    display: none;
-  }
-
-  /* Two rows: title and language, then search beside the view buttons. */
-  .topbar {
-    gap: 0.5rem 0.6rem;
-  }
-
-  .topbar__identity {
-    flex: 1 1 auto;
-    order: 0;
-  }
-
-  .topbar__lang {
-    order: 1;
-  }
-
-  .search {
-    order: 2;
-    flex: 1 1 9rem;
-    max-width: none;
-  }
-
-  .topbar__controls {
-    order: 3;
-    flex-shrink: 0;
-  }
-
-  .topbar__views .control {
-    padding: 0.4rem 0.5rem;
-    font-size: 0.78rem;
-  }
-
-
-  .overlays {
-    max-width: calc(100% - 3.6rem);
-  }
-
-  /* The result list spans the whole bar, not just the narrow input. */
-  .topbar {
-    position: relative;
-  }
-
-  .search {
-    position: static;
-  }
-
-  .search__results {
-    top: 100%;
-    left: 0.5rem;
-    right: 0.5rem;
-  }
-
-  .search__option {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .search__kind {
-    grid-column: 1;
-    grid-row: auto;
-    justify-self: start;
-  }
-
-  .chip {
-    font-size: 0.72rem;
-    padding: 0.22rem 0.55rem;
-  }
-
-  .panel {
-    width: 100%;
-  }
-
-  .stage {
-    min-height: 38vh;
-  }
-
-  /* Sticky would float the timeline over the chapters strip whenever the
-     page is taller than the screen; on a phone it scrolls with the page. */
-  .timeline {
-    position: static;
-  }
-
-  .disclaimer {
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: stretch;
-  }
-
-  /* The sticky timeline overlays the foot of the banner, so the dismiss button
-     goes to the top where it is always reachable. */
-  .disclaimer__dismiss {
-    order: -1;
-    align-self: flex-end;
-  }
-
-  .disclaimer__text p {
-    font-size: 0.75rem;
-  }
-
-  .timeline__year {
-    font-size: 1.25rem;
-  }
-
-  .footer__column--wide {
-    grid-column: span 1;
-  }
-}
-
-/* ------------------------------------------------------------- chapters */
-
-.chapters {
-  flex-shrink: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
-  padding: 0.5rem 1rem;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.chapters__heading {
-  flex-shrink: 0;
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.chapters__tabs {
-  display: flex;
-  flex-wrap: wrap;
-  min-width: 0;
-  gap: 0.25rem;
-}
-
-.chapters__tab {
-  padding: 0.22rem 0.55rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: none;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.chapters__tab:hover {
-  color: var(--text-primary);
-}
-
-.chapters__tab--active {
-  border-color: var(--border-strong);
-  background: var(--surface-raised);
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.chapters__strip {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  align-items: baseline;
-  gap: 0.4rem;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.chapters__chip {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.35rem;
-  padding: 0.28rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-raised);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 0.8rem;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.chapters__chip:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-sunken);
-}
-
-.chapters__chip-range {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
-
 /* --------------------------------------------------------- chapter mode */
 
-.chapter {
-  flex-shrink: 0;
-  padding: 0.6rem 1rem 0.75rem;
-  border-top: 1px solid var(--border);
-  background: var(--surface-raised);
+.dock--chapter {
+  max-height: calc(100% - 1.5rem);
+  overflow-y: auto;
 }
 
 .chapter__head {
@@ -1498,7 +1543,7 @@ a:hover {
 
 .chapter__title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
 }
 
 .chapter__range {
@@ -1526,10 +1571,9 @@ a:hover {
 }
 
 .chapter__desc {
-  margin: 0.35rem 0 0;
+  margin: 0.3rem 0 0;
   color: var(--text-secondary);
-  font-size: 0.85rem;
-  max-width: 70rem;
+  font-size: 0.82rem;
 }
 
 .chapter__note {
@@ -1538,14 +1582,14 @@ a:hover {
   border-left: 3px solid var(--warn-border);
   background: var(--warn-surface);
   color: var(--warn-text);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 
 .chapter__controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.55rem;
+  margin-top: 0.5rem;
 }
 
 .chapter__axis {
@@ -1608,8 +1652,8 @@ a:hover {
 }
 
 .chapter__readout {
-  margin: 0.35rem 0 0;
-  font-size: 0.95rem;
+  margin: 0.3rem 0 0;
+  font-size: 0.92rem;
   font-weight: 600;
 }
 
@@ -1621,53 +1665,13 @@ a:hover {
 }
 
 .chapter__help {
-  margin: 0.35rem 0 0;
-  font-size: 0.74rem;
+  margin: 0.3rem 0 0;
+  font-size: 0.72rem;
   color: var(--text-muted);
 }
 
 .chapter__help a {
   color: inherit;
-}
-
-@media (max-width: 640px) {
-  .chapters {
-    padding: 0.45rem 0.75rem;
-  }
-
-  /* One scrolling row of tabs instead of two wrapped ones. */
-  .chapters__tabs {
-    flex: 1 1 100%;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .chapters__strip {
-    flex-basis: 100%;
-  }
-
-  .chapter {
-    padding: 0.5rem 0.75rem 0.65rem;
-  }
-
-  .chapter__exit {
-    order: 0;
-    margin-left: 0;
-  }
-}
-
-/* ------------------------------------------- hold-to-compare and sides */
-
-.control--hold {
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-}
-
-.control--hold:active {
-  background: var(--surface-sunken);
-  border-color: var(--border-strong);
 }
 
 .chapter__sides {
@@ -1713,4 +1717,187 @@ a:hover {
   .sidechip__swatch--0 { background: #6ea8ff; }
   .sidechip__swatch--1 { background: #ff8a7a; }
   .sidechip__swatch--2 { background: #c99cff; }
+}
+
+/* ------------------------------------------------------------- narrow view */
+
+@media (max-width: 700px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.6rem;
+  }
+
+  .topbar__tagline {
+    display: none;
+  }
+
+  /* The language names in the select identify it well enough; the word
+     "Language" is what pushes the controls off a narrow screen. */
+  .control--select #language-label {
+    display: none;
+  }
+
+  /* Two rows: title and the controls, then the search on its own. */
+  .topbar__identity {
+    flex: 1 1 auto;
+    order: 0;
+  }
+
+  .topbar__controls {
+    order: 1;
+    flex-shrink: 0;
+  }
+
+  .search {
+    order: 2;
+    flex: 1 1 100%;
+    max-width: none;
+    position: static;
+  }
+
+  .topbar {
+    position: relative;
+  }
+
+  .search__results {
+    top: 100%;
+    left: 0.5rem;
+    right: 0.5rem;
+  }
+
+  .search__option {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .search__kind {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+  }
+
+  .overlays {
+    max-width: calc(100% - 3.6rem);
+  }
+
+  .chip {
+    font-size: 0.72rem;
+    padding: 0.22rem 0.55rem;
+  }
+
+  /* The detail panel becomes a bottom sheet. */
+  .panel {
+    top: auto;
+    bottom: 0;
+    z-index: 9;
+    width: 100%;
+    height: 62%;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    transform: translateY(100%);
+  }
+
+  .panel--open {
+    transform: none;
+  }
+
+  .dock {
+    bottom: 0.4rem;
+    width: calc(100% - 0.8rem);
+    padding: 0.4rem 0.6rem 0.45rem;
+  }
+
+  .dock__row {
+    gap: 0.2rem 0.6rem;
+  }
+
+  .timeline__year,
+  .timeline__jump-input {
+    font-size: 1.15rem;
+  }
+
+  .timeline__features {
+    display: none;
+  }
+
+  .timeline__era {
+    display: inline;
+  }
+
+  .timeline__band-label {
+    display: none;
+  }
+
+  .timeline__band {
+    border-radius: 2px;
+  }
+
+  .topbar__title {
+    font-size: 0.95rem;
+  }
+
+  /* The "about" button shrinks to an icon; its label stays as aria-label. */
+  .topbar__about span {
+    display: none;
+  }
+
+  .topbar__about::before {
+    content: 'i';
+    display: inline-block;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 1.5px solid currentcolor;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.1rem;
+    text-align: center;
+  }
+
+  .topbar__controls {
+    order: 0;
+  }
+
+  .topbar__identity {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .topbar__title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dock__chapters {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  .timeline__controls .control--icon {
+    min-width: 1.9rem;
+    padding: 0.3rem 0.4rem;
+  }
+
+  .dock--chapter {
+    max-height: 52%;
+  }
+
+  .chapter__exit {
+    order: 0;
+    margin-left: 0;
+  }
+
+  .drawer {
+    width: 100%;
+  }
+
+  .about {
+    width: calc(100% - 1rem);
+    max-height: calc(100% - 1rem);
+  }
+
+  .footer__column--wide {
+    grid-column: span 1;
+  }
 }

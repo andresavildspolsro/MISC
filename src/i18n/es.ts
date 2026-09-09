@@ -40,7 +40,9 @@ export const es: Strings = {
   timelineHelp:
     'Usa las flechas izquierda y derecha para avanzar entre instantáneas. El control solo se detiene en años que existen en el conjunto de datos: no hay nada entre ellos.',
   timelineNote:
-    'Las instantáneas están repartidas de forma uniforme en este eje, no en proporción al tiempo transcurrido. Los intervalos entre ellas van de una década a decenas de milenios.',
+    'Dentro de cada tramo el eje es lineal en el tiempo; la anchura de los tramos sigue el número de instantáneas, no los años que abarcan. Los nombres de las épocas son etiquetas de orientación, no parte del conjunto de datos.',
+  helpAxisHeading: 'El eje',
+  eraNames: ['Prehistoria', 'Antigüedad', 'Edad Media', 'Edad Moderna', 'Época contemporánea'],
   goToYear: (year) => `Ir a la instantánea de ${year}`,
   snapshotPosition: (index, total) => `Instantánea ${index} de ${total}`,
 
@@ -77,7 +79,7 @@ export const es: Strings = {
   helpSteps: [
     'Mueve el año en el eje bajo el mapa, o haz clic en el año y escribe uno.',
     'Haz clic en un territorio para abrir su registro del conjunto de datos.',
-    'Abre un capítulo bajo el mapa y recorre sus hitos.',
+    'Abre Capítulos en la barra inferior y recorre los hitos de uno de ellos.',
     'Escribe un territorio, evento, capítulo o año en el cuadro superior.',
   ],
 
@@ -168,9 +170,15 @@ export const es: Strings = {
   chapterOpenAria: (name, range) => `Abrir el capítulo ${name} (${range})`,
   chapterSidesLabel: 'Bandos',
 
-  modernHold: 'Hoy',
-  modernHoldTitle: (snapshotYear) =>
-    `Mantén pulsado para comparar con las fronteras actuales (la instantánea más reciente, ${snapshotYear})`,
+  modernToggle: 'Fronteras actuales',
+  modernToggleTitle: (snapshotYear) =>
+    `Mostrar las fronteras actuales como contorno para comparar (la instantánea más reciente del conjunto de datos, ${snapshotYear})`,
+
+  chaptersDrawerIntro:
+    'Periodos acotados con hitos en su propio eje. Las fronteras del mapa proceden siempre de la instantánea indicada del conjunto de datos.',
+  chaptersClose: 'Cerrar los capítulos',
+
+  aboutButton: 'Sobre los datos',
 
   disclaimerTitle: 'Las fronteras anteriores a 1648 son aproximaciones',
   disclaimerBody:

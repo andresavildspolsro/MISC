@@ -14,10 +14,28 @@ displayed as "not in dataset" rather than filled in.
 
 ## What the site does
 
-- **Time slider** stepping through the 53 snapshot years that exist as files
+- **The map is the page.** It fills the viewport under a slim top bar (title,
+  search, "About the data", language); everything else floats over it: the
+  layer chips and facts card top-left, the help card, the detail panel (a
+  right-hand drawer, a bottom sheet on phones), and the **dock** at the foot
+  of the map that carries the view crumbs ("World › Europe", the current one
+  highlighted as the map moves), the year with its previous/next step buttons,
+  the axis and the Chapters button. The camera is told how much of the canvas
+  the dock covers, so framing and "slide over to it" aim at the visible map.
+  Nothing scrolls; the data and method notes open in a dialog.
+- **Time axis** stepping through the 53 snapshot years that exist as files
   upstream — 123000 BC to AD 2010. The control is indexed by snapshot, so a
-  year with no file simply cannot be selected. Arrow keys step; a play button
-  animates; neighbouring years are prefetched.
+  year with no file simply cannot be selected: press or drag anywhere on the
+  track and the thumb snaps to the nearest stop. Stops are *placed* by a
+  segmented rule stated in the help card: the axis is cut at conventional era
+  boundaries, each segment's width follows the number of snapshots it holds,
+  and inside a segment years sit linearly in time — so 1930, 1938 and 1945
+  read as close together, 1815 and 1880 as far apart, and the 123 000 BC
+  snapshot does not crush antiquity into a sliver. Era bands (Prehistory,
+  Antiquity, Middle Ages, Early modern, Modern era) run along the top of the
+  track as orientation labels; the help card says they are not dataset
+  content. Arrow keys step; a play button animates; neighbouring years are
+  prefetched.
 - **Territory colouring** keyed on `SUBJECTO` (falling back to `NAME`) so that
   possessions of the same power share a colour.
 - **Names on the map.** Each named territory carries its dataset `NAME` (or
@@ -62,9 +80,9 @@ displayed as "not in dataset" rather than filled in.
   rivers under ancient borders mislead.
 - **Pre-1648 banner** noting that fixed national boundaries are anachronistic in
   Europe before the Peace of Westphalia.
-- **A "?" help card** — the legend plus a four-step "how to start" — opens on
-  the first visit and on demand afterwards.
-- **Timeline readout** shows the previous and next snapshot years as step
+- **A "?" help card** — the legend, a four-step "how to start" and the axis
+  rules — opens on the first visit and from the chip row afterwards.
+- **Year readout** shows the previous and next snapshot years as step
   buttons ("‹ 1600 · 1715 ›"), so the size of the coming jump is visible
   before it is made.
 - **Three languages** — English, Czech and Spanish — switchable from the top bar
@@ -106,9 +124,10 @@ displayed as "not in dataset" rather than filled in.
   with a console warning rather than shown on a map that predates them.
 - **Chapters.** Thirty curated bounded periods (`src/periodsData.ts`) — from the
   Greco-Persian Wars through the Reconquista and the Age of Discovery to the
-  Cold War and the Yugoslav Wars — opened from a strip of
-  buttons under the map. A chapter frames the map on its theatre and swaps the
-  main ordinal slider for a **milestone axis**: linear in real time from the
+  Cold War and the Yugoslav Wars — listed by category, each with its years
+  and a one-line description, in a drawer opened from the dock. A chapter
+  frames the map on its theatre and swaps the dock for the chapter card with a
+  **milestone axis**: linear in real time from the
   chapter's first year to its last, with marks at the exact years of its
   milestones (which are ordinary entries of the events layer, so they keep
   their popups, sources and translations). Milestones reveal progressively as
@@ -132,9 +151,13 @@ displayed as "not in dataset" rather than filled in.
   and the American Civil War deliberately have no sides: the dataset draws no
   separate Bohemia, no Athens and Sparta, and no Confederacy at their
   snapshots — and each of those chapter descriptions says so.
-- **Hold-to-compare "Today" button.** Holding it overlays today's borders as
-  an outline — the dataset's own newest snapshot (2010), fetched on first
-  press, never a hand-drawn "modern map".
+- **"Today's borders" chip.** A toggle among the layer chips that overlays
+  today's borders as an outline for comparison — the dataset's own newest
+  snapshot (2010), fetched on first use, never a hand-drawn "modern map".
+- **Bottom sheet on phones.** On a narrow screen an event opens in the same
+  sheet the territory record uses, instead of a map popup that the screen
+  edges would clip; the popup stays on desktop, where it sits beside the
+  spotlit territory.
 - **Event spotlight.** While an event popup is open in the main view, the
   dataset territories containing the event's coordinates stay lit and the
   rest of the map is repainted as a flat, colourless grey — fills, outlines,
@@ -152,7 +175,7 @@ therefore also released under **GPL-3.0-or-later**; see [`LICENSE`](LICENSE).
 The data pipeline re-checks the upstream licence text on every run and warns if
 it is no longer GPL v3.
 
-Attribution appears in the site footer:
+Attribution appears in the "About the data" dialog, opened from the top bar:
 
 | Component | Attribution |
 |---|---|
@@ -222,11 +245,11 @@ node scripts/fetch-data.mjs --from ../historical-basemaps   # use a local checko
    nothing in the app hard-codes a year list. If upstream adds a property, the
    detail panel already renders it verbatim; add a friendly label for it in
    `propertyLabels` in each `src/i18n/*.ts` if you want one.
-4. If the licence warning fires, resolve it before deploying: the footer text in
-   `src/i18n/*.ts` states GPL-3.0 explicitly.
+4. If the licence warning fires, resolve it before deploying: the attribution
+   text in `src/i18n/*.ts` states GPL-3.0 explicitly.
 
-The commit is shown in the site footer, so a visitor can tell exactly which
-version of the dataset they are looking at.
+The commit is shown in the "About the data" dialog, so a visitor can tell
+exactly which version of the dataset they are looking at.
 
 ### The simplification flag
 
@@ -253,7 +276,7 @@ Trade-offs, so the choice is made with open eyes:
   positions change. This is verified against the unsimplified output.
 
 The manifest records whether the data was simplified and at what tolerance, and
-the footer says so on the page.
+the "About the data" dialog says so on the page.
 
 ## How coverage varies
 
@@ -296,7 +319,8 @@ Two things worth knowing about `BORDERPRECISION`:
   an undocumented value 0 appears 4 times, and one feature has none. In practice
   the scale is binary.
 
-The footer states that subdivision detail varies by region and period. Regional
+The method note in the "About the data" dialog states that subdivision detail
+varies by region and period. Regional
 binning above is by centroid against rough boxes — the point is the order of
 magnitude, not the third decimal.
 
@@ -309,13 +333,16 @@ Vite + vanilla TypeScript, MapLibre GL JS, no framework and no server code.
 | `scripts/fetch-data.mjs` | Build-time download, validation, manifest |
 | `src/data.ts` | Manifest and snapshot loading, LRU cache, prefetch |
 | `src/map.ts` | MapLibre style, layers, hover and selection |
-| `src/timeline.ts` | Snapshot-indexed slider, ticks, playback |
+| `src/timeline.ts` | Snapshot-indexed axis: segmented placement, era bands, ticks, playback |
 | `src/panel.ts` | Detail panel; renders the property bag and nothing else |
 | `src/colors.ts` | Categorical palette and the hash that assigns it |
 | `src/format.ts` | Locale-aware year and count formatting |
 | `src/strings.ts` | Active-locale accessor, `?lang=` / storage resolution |
 | `src/i18n/*.ts` | **Every** user-facing string, one file per language |
-| `src/main.ts` | Wiring, basemap defaults, disclaimer, deep links |
+| `src/labels.ts` | Label placement (pole of inaccessibility), area tiers |
+| `src/search.ts` | Search box: input, result list, keyboard handling |
+| `src/nameIndex.ts` | Lazy loader of the build-time NAME → years index |
+| `src/main.ts` | Wiring, dock, chapters drawer, search matching, deep links |
 
 ### Languages
 

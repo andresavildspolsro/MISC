@@ -209,6 +209,20 @@ export class DetailPanel {
     }
   }
 
+  /**
+   * Shows arbitrary content — the events layer on a phone, where a map popup
+   * would be clipped and the bottom sheet reads better. The mode strip is
+   * hidden: this is not a dataset record.
+   */
+  showCustom(title: string, content: HTMLElement): void {
+    this.titleNode.textContent = title;
+    this.titleNode.removeAttribute('title');
+    this.modeNode.hidden = true;
+    this.modeNode.classList.remove('panel__mode--pinned');
+    this.body.innerHTML = '';
+    this.body.append(content);
+  }
+
   setOpen(open: boolean): void {
     this.root.classList.toggle('panel--open', open);
     this.root.setAttribute('aria-hidden', open ? 'false' : 'true');
