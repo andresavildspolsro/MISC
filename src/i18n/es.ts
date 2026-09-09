@@ -73,7 +73,7 @@ export const es: Strings = {
   searchNotInLoadedSnapshot: (name, year) =>
     `«${name}» no se encontró en la instantánea cargada de ${year}.`,
 
-  helpToggle: 'Ayuda: cómo leer este mapa',
+  helpToggle: 'Leyenda y ayuda',
   helpClose: 'Cerrar la ayuda',
   helpStartHeading: 'Cómo empezar',
   helpSteps: [
@@ -212,7 +212,7 @@ export const es: Strings = {
     'Los autores del conjunto de datos señalan que en Europa el concepto de frontera nacional fija solo cobra sentido después de la Paz de Westfalia (1648). Las entidades políticas anteriores tenían fronteras superpuestas, graduales y a menudo indefinidas. Considera cada línea de este mapa una aproximación académica, no una frontera medida.',
   disclaimerDismiss: 'Entendido',
 
-  legendHeading: 'Cómo leer este mapa',
+  legendHeading: 'Leyenda y ayuda',
   legendColorNote:
     'El color agrupa los territorios bajo una misma potencia («bajo la autoridad de»). Los colores se repiten: identifican agrupaciones, no Estados concretos. Pasa el ratón o haz clic en un territorio para ver su nombre.',
   legendPrecise: 'Contorno continuo: frontera registrada como precisa (3)',

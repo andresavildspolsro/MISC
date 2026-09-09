@@ -74,7 +74,7 @@ export const cs: Strings = {
   searchNotInLoadedSnapshot: (name, year) =>
     `„${name}“ se v načteném snímku ${year} nenašlo.`,
 
-  helpToggle: 'Nápověda: jak číst mapu',
+  helpToggle: 'Legenda a nápověda',
   helpClose: 'Zavřít nápovědu',
   helpStartHeading: 'Jak začít',
   helpSteps: [
@@ -212,7 +212,7 @@ export const cs: Strings = {
     'Autoři datové sady upozorňují, že v Evropě dává pojem pevné státní hranice smysl až po vestfálském míru (1648). Dřívější útvary měly překrývající se, pozvolné a často nevymezené hranice. Každou čáru na této mapě berte jako odborný odhad, nikoli jako zaměřenou hranici.',
   disclaimerDismiss: 'Rozumím',
 
-  legendHeading: 'Jak číst tuto mapu',
+  legendHeading: 'Legenda a nápověda',
   legendColorNote:
     'Barva seskupuje území pod stejnou mocností („pod svrchovaností“). Barvy se opakují — označují seskupení, nikoli konkrétní státy. Název území zjistíte najetím myší nebo kliknutím.',
   legendPrecise: 'Plná linka: hranice zaznamenaná jako přesná (3)',

@@ -73,7 +73,7 @@ export const en: Strings = {
   searchNotInLoadedSnapshot: (name, year) =>
     `“${name}” was not found in the loaded ${year} snapshot.`,
 
-  helpToggle: 'Help: reading this map',
+  helpToggle: 'Legend and help',
   helpClose: 'Close help',
   helpStartHeading: 'How to start',
   helpSteps: [
@@ -211,7 +211,7 @@ export const en: Strings = {
     'The dataset authors note that in Europe the concept of a fixed national boundary only becomes meaningful after the Peace of Westphalia (1648). Earlier polities had overlapping, gradual and often undefined frontiers. Treat every line on this map as a scholarly approximation, not a surveyed border.',
   disclaimerDismiss: 'Understood',
 
-  legendHeading: 'Reading this map',
+  legendHeading: 'Legend and help',
   legendColorNote:
     'Colour groups territories under the same power (“subject of”). Colours repeat — they identify groupings, not specific states. Hover or click a territory for its name.',
   legendPrecise: 'Solid outline: border recorded as precise (3)',
